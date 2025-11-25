@@ -6,7 +6,7 @@
 <title>よっちGame 🐾</title>
 <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700&display=swap" rel="stylesheet">
 <style>
-  /* ▼▼▼ デザイン（変更なし） ▼▼▼ */
+  /* ▼▼▼ デザイン設定 ▼▼▼ */
   body {
     margin: 0;
     font-family: 'M PLUS Rounded 1c', sans-serif;
@@ -19,7 +19,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: 100vh;
+    height: 100dvh; /* アドレスバー対策 */
     color: #5a4a42;
     -webkit-tap-highlight-color: transparent;
     overscroll-behavior: none;
@@ -31,12 +31,13 @@
     color: #8d5524;
     text-shadow: 2px 2px 0 #fff;
     flex-shrink: 0;
+    pointer-events: none; /* タイトル誤タップ防止 */
   }
 
   #game-container {
       width: 95vw;
-      height: 85vh;
-      max-width: 500px;
+      height: 80dvh;
+      max-width: 450px;
       max-height: 800px;
       border: 6px solid #e6cba8;
       border-radius: 20px;
@@ -52,10 +53,10 @@
   #next-area {
       position: absolute;
       top: 10px; right: 10px;
-      width: 70px; height: 80px;
+      width: 60px; height: 70px;
       background: #fff;
       border: 3px solid #ffb347;
-      border-radius: 15px;
+      border-radius: 12px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -65,7 +66,7 @@
   }
   #next-label { font-size: 10px; font-weight: bold; color: #ffb347; margin-bottom: 2px; }
   #next-ball-preview {
-      width: 40px; height: 40px;
+      width: 35px; height: 35px;
       border-radius: 50%;
       background-size: contain;
       background-repeat: no-repeat;
@@ -107,7 +108,7 @@
 
   #danger-line {
       position: absolute;
-      top: 80px;
+      top: 120px;
       left: 0;
       width: 100%;
       height: 0;
@@ -124,7 +125,7 @@
 <div id="game-container">
     <div id="loading-screen">
         <div class="spinner"></div>
-        <div>画像を調整中だワン...✂️</div>
+        <div>準備中だワン...✂️</div>
     </div>
 
     <div id="score-board">
@@ -143,19 +144,19 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
 
 <script>
-  // ▼▼▼ 11段階の設定 ▼▼▼
+  // ▼▼▼ 難易度調整（本家比率再現） ▼▼▼
   const FRUIT_LEVELS = [
-      { level: 1,  radius: 22,  img: '1.png' },
-      { level: 2,  radius: 32,  img: '2.png' },
-      { level: 3,  radius: 40,  img: '3.png' },
-      { level: 4,  radius: 45,  img: '4.png' },
-      { level: 5,  radius: 55,  img: '5.png' },
-      { level: 6,  radius: 62,  img: '6.png' },
-      { level: 7,  radius: 70,  img: '7.png' },
-      { level: 8,  radius: 85,  img: '8.png' },
-      { level: 9,  radius: 95,  img: '9.png' },
-      { level: 10, radius: 105, img: '10.png' },
-      { level: 11, radius: 120, img: '11.png' }
+      { level: 1,  radius: 11,  img: '1.png' }, 
+      { level: 2,  radius: 16,  img: '2.png' }, 
+      { level: 3,  radius: 21,  img: '3.png' }, 
+      { level: 4,  radius: 24,  img: '4.png' }, 
+      { level: 5,  radius: 29,  img: '5.png' }, 
+      { level: 6,  radius: 34,  img: '6.png' }, 
+      { level: 7,  radius: 39,  img: '7.png' }, 
+      { level: 8,  radius: 47,  img: '8.png' }, 
+      { level: 9,  radius: 55,  img: '9.png' }, 
+      { level: 10, radius: 65,  img: '10.png' }, 
+      { level: 11, radius: 78,  img: '11.png' }  
   ];
 
   const { Engine, Render, Runner, World, Bodies, Body, Events } = Matter;
@@ -163,11 +164,11 @@
   let engine, render, runner;
   let currentBall = null;
   let nextLevelIndex = 0;
-  let canDrop = false;
+  let canDrop = false; // 操作可能かどうかのフラグ
+  let isDragging = false; // 今ドラッグ中か？
   let score = 0;
   let gameWidth, gameHeight;
   
-  // 加工済み画像データ置き場
   const circularImages = {}; 
 
   const container = document.getElementById('game-container');
@@ -175,7 +176,7 @@
   const nextPreviewEl = document.getElementById('next-ball-preview');
   const loadingScreen = document.getElementById('loading-screen');
 
-  // --- 1. 画像処理：丸刈り＆リサイズ（ここを修正！） ---
+  // --- 1. 画像処理 ---
   async function preloadAndCropImages() {
       gameWidth = container.clientWidth;
       gameHeight = container.clientHeight;
@@ -187,37 +188,28 @@
               img.src = fruit.img;
               
               img.onload = () => {
-                  // ▼ 修正点：キャンバスサイズを「ボールの直径」に固定する
                   const targetSize = fruit.radius * 2; 
-                  
                   const canvas = document.createElement('canvas');
                   canvas.width = targetSize;
                   canvas.height = targetSize;
                   const ctx = canvas.getContext('2d');
 
-                  // 1. 円形のパスを作る
                   ctx.beginPath();
                   ctx.arc(targetSize/2, targetSize/2, targetSize/2, 0, Math.PI * 2);
                   ctx.closePath();
-                  ctx.clip(); // 切り抜く
+                  ctx.clip(); 
 
-                  // 2. 画像の「真ん中」を切り取って、小さなキャンバスに縮小して描画
-                  // 元画像の正方形サイズ（短い方の辺に合わせる）
                   const sourceSize = Math.min(img.width, img.height);
                   const sx = (img.width - sourceSize) / 2;
                   const sy = (img.height - sourceSize) / 2;
 
-                  // drawImage(元画像, 元X, 元Y, 元幅, 元高, 先X, 先Y, 先幅, 先高)
-                  // ここで強力にリサイズがかかる
                   ctx.drawImage(img, sx, sy, sourceSize, sourceSize, 0, 0, targetSize, targetSize);
 
-                  // 3. データとして保存
                   circularImages[index] = canvas.toDataURL();
                   resolve();
               };
               img.onerror = () => {
-                  console.log("画像なし: " + fruit.img);
-                  circularImages[index] = null; // 画像なしなら色のみ
+                  circularImages[index] = null;
                   resolve();
               };
           });
@@ -225,7 +217,6 @@
       
       await Promise.all(promises);
       
-      // ゲーム開始
       loadingScreen.style.opacity = 0;
       setTimeout(() => {
           loadingScreen.style.display = 'none';
@@ -236,7 +227,7 @@
   // --- 2. ゲーム初期化 ---
   function initGame() {
       engine = Engine.create();
-      engine.world.gravity.y = 1.5;
+      engine.world.gravity.y = 1.2;
 
       render = Render.create({
           element: container,
@@ -250,7 +241,6 @@
           }
       });
 
-      // 極厚の床と壁（すり抜け防止）
       const wallThickness = 500;
       const walls = [
           Bodies.rectangle(gameWidth/2, gameHeight + wallThickness/2, gameWidth + wallThickness*2, wallThickness, { isStatic: true, render: { fillStyle: '#e6cba8' } }),
@@ -278,19 +268,20 @@
           isStatic: isStatic,
           label: 'fruit_' + index,
           restitution: 0.2,
-          friction: 0.05,
+          friction: 0.1, 
+          density: 0.001,
           render: {
               sprite: texture ? {
                   texture: texture,
-                  xScale: 1, // すでにリサイズ済みなので1倍でOK！
+                  xScale: 1, 
                   yScale: 1
-              } : { fillStyle: '#ffb347' } // 画像エラー時は色
+              } : { fillStyle: '#ffb347' } 
           }
       });
   }
 
   function updateNextBall() {
-      nextLevelIndex = Math.floor(Math.random() * 3);
+      nextLevelIndex = Math.floor(Math.random() * 5);
       const texture = circularImages[nextLevelIndex];
       if (texture) {
           nextPreviewEl.style.backgroundImage = `url(${texture})`;
@@ -304,22 +295,41 @@
   function spawnReadyBall() {
       if (currentBall) return;
       currentBall = createFruit(gameWidth/2, 60, nextLevelIndex, true);
-      // お化けモード
       currentBall.collisionFilter = { group: -1, category: 0x0002, mask: 0x0000 }; 
       World.add(engine.world, currentBall);
       canDrop = true;
+      isDragging = false;
   }
 
-  // --- 4. 操作 ---
-  container.addEventListener('touchstart', handleInput, { passive: false });
-  container.addEventListener('mousedown', handleInput);
-
-  function handleInput(e) {
+  // --- 4. 操作（ドラッグ＆ドロップ実装） ---
+  
+  // タッチ開始
+  const handleStart = (e) => {
       if (!canDrop || !currentBall) return;
       e.preventDefault();
+      isDragging = true;
+      moveBall(e); // 押した瞬間にその位置へ
+  };
 
+  // 移動中
+  const handleMove = (e) => {
+      if (!canDrop || !currentBall || !isDragging) return;
+      e.preventDefault();
+      moveBall(e);
+  };
+
+  // 指を離した時（落下！）
+  const handleEnd = (e) => {
+      if (!canDrop || !currentBall || !isDragging) return;
+      e.preventDefault();
+      isDragging = false;
+      dropBall();
+  };
+
+  // ボールを指の位置に追従させる処理
+  function moveBall(e) {
       let clientX;
-      if (e.type === 'touchstart') {
+      if (e.type.startsWith('touch')) {
           clientX = e.touches[0].clientX;
       } else {
           clientX = e.clientX;
@@ -333,18 +343,31 @@
       const maxX = gameWidth - fruit.radius - 10;
       const clampedX = Math.max(minX, Math.min(maxX, x));
 
+      // 物理演算の座標を強制更新
       Body.setPosition(currentBall, { x: clampedX, y: 60 });
+  }
+
+  // 落下処理
+  function dropBall() {
       Body.setStatic(currentBall, false);
-      
-      // 物理判定を復活
       currentBall.collisionFilter = { group: 0, category: 0x0001, mask: 0xFFFFFFFF };
 
       currentBall = null;
-      canDrop = false;
+      canDrop = false; // 次が出るまで操作禁止
 
       updateNextBall();
-      setTimeout(spawnReadyBall, 800);
+      setTimeout(spawnReadyBall, 600);
   }
+
+  // イベントリスナー登録
+  container.addEventListener('touchstart', handleStart, { passive: false });
+  container.addEventListener('touchmove', handleMove, { passive: false });
+  container.addEventListener('touchend', handleEnd, { passive: false });
+  
+  // PC/マウス操作用
+  container.addEventListener('mousedown', handleStart);
+  window.addEventListener('mousemove', handleMove); // 画面外に出ても追従するようにwindow
+  window.addEventListener('mouseup', handleEnd);    // 画面外で離しても落ちるようにwindow
 
   // --- 5. 合体 ---
   function handleCollision(event) {
