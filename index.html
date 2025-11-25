@@ -6,23 +6,23 @@
 <title>よっちGame 🐾</title>
 <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700&display=swap" rel="stylesheet">
 <style>
-  /* ▼▼▼ ポメ風デザイン（修正版） ▼▼▼ */
+  /* ▼▼▼ デザイン（変更なし） ▼▼▼ */
   body {
     margin: 0;
     font-family: 'M PLUS Rounded 1c', sans-serif;
     background-color: #fff8e7;
     background-image: radial-gradient(#fff0d0 10%, transparent 10%);
     background-size: 20px 20px;
-    overflow: hidden; /* スクロール完全禁止 */
+    overflow: hidden;
     touch-action: none;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: 100vh; /* 画面の高さいっぱいに */
+    height: 100vh;
     color: #5a4a42;
     -webkit-tap-highlight-color: transparent;
-    overscroll-behavior: none; /* バウンススクロール防止 */
+    overscroll-behavior: none;
   }
 
   h1 { 
@@ -30,36 +30,29 @@
     font-size: 1.4rem; 
     color: #8d5524;
     text-shadow: 2px 2px 0 #fff;
-    flex-shrink: 0; /* タイトルは縮めない */
+    flex-shrink: 0;
   }
 
-  /* ゲームのメイン枠（画面サイズに合わせて可変） */
   #game-container {
-      width: 95vw; /* 横幅いっぱい */
-      height: 85vh; /* 縦幅も85%まで広げる */
-      max-width: 500px; /* タブレットなどで広がりすぎないように */
+      width: 95vw;
+      height: 85vh;
+      max-width: 500px;
       max-height: 800px;
       border: 6px solid #e6cba8;
       border-radius: 20px;
       background: rgba(255,255,255,0.9);
       box-shadow: 0 8px 20px rgba(141, 85, 36, 0.2);
       position: relative;
-      overflow: hidden; /* はみ出し防止 */
+      overflow: hidden;
       touch-action: none;
   }
 
-  canvas {
-      display: block;
-      /* キャンバス自体は四角いが、中身のボールは丸い */
-  }
+  canvas { display: block; }
 
-  /* 次のボール表示エリア */
   #next-area {
       position: absolute;
-      top: 10px;
-      right: 10px;
-      width: 70px;
-      height: 80px;
+      top: 10px; right: 10px;
+      width: 70px; height: 80px;
       background: #fff;
       border: 3px solid #ffb347;
       border-radius: 15px;
@@ -68,24 +61,21 @@
       align-items: center;
       justify-content: center;
       box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-      pointer-events: none; /* タップの邪魔をしない */
+      pointer-events: none;
   }
   #next-label { font-size: 10px; font-weight: bold; color: #ffb347; margin-bottom: 2px; }
   #next-ball-preview {
-      width: 40px;
-      height: 40px;
+      width: 40px; height: 40px;
       border-radius: 50%;
-      background-size: cover;
+      background-size: contain;
+      background-repeat: no-repeat;
       background-position: center;
       border: 2px solid #fff8e7;
-      overflow: hidden;
   }
 
-  /* スコア表示 */
   #score-board {
       position: absolute;
-      top: 10px;
-      left: 15px;
+      top: 10px; left: 15px;
       font-size: 1.5rem;
       font-weight: bold;
       color: #ff8ba7;
@@ -94,7 +84,6 @@
   }
   #score-label { font-size: 0.8rem; color: #8d5524; }
 
-  /* ローディング画面 */
   #loading-screen {
       position: absolute;
       top: 0; left: 0; width: 100%; height: 100%;
@@ -116,10 +105,9 @@
   }
   @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-  /* ゲームオーバーライン */
   #danger-line {
       position: absolute;
-      top: 80px; /* 少し上にした */
+      top: 80px;
       left: 0;
       width: 100%;
       height: 0;
@@ -136,7 +124,7 @@
 <div id="game-container">
     <div id="loading-screen">
         <div class="spinner"></div>
-        <div>写真を丸くしてるワン...✂️</div>
+        <div>画像を調整中だワン...✂️</div>
     </div>
 
     <div id="score-board">
@@ -146,7 +134,7 @@
     
     <div id="next-area">
         <div id="next-label">NEXT</div>
-        <canvas id="next-ball-preview" width="40" height="40"></canvas>
+        <div id="next-ball-preview"></div>
     </div>
     
     <div id="danger-line"></div>
@@ -155,8 +143,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
 
 <script>
-  // ▼▼▼ 11段階の設定（半径と画像） ▼▼▼
-  // radius: ボールの大きさ（ピクセル）
+  // ▼▼▼ 11段階の設定 ▼▼▼
   const FRUIT_LEVELS = [
       { level: 1,  radius: 22,  img: '1.png' },
       { level: 2,  radius: 32,  img: '2.png' },
@@ -170,9 +157,8 @@
       { level: 10, radius: 105, img: '10.png' },
       { level: 11, radius: 120, img: '11.png' }
   ];
-  // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
-  const { Engine, Render, Runner, World, Bodies, Body, Events, Composite } = Matter;
+  const { Engine, Render, Runner, World, Bodies, Body, Events } = Matter;
 
   let engine, render, runner;
   let currentBall = null;
@@ -181,53 +167,57 @@
   let score = 0;
   let gameWidth, gameHeight;
   
-  // 丸く切り抜いた画像データ(URL)を保存する場所
+  // 加工済み画像データ置き場
   const circularImages = {}; 
 
   const container = document.getElementById('game-container');
   const scoreEl = document.getElementById('score');
-  const nextPreviewCanvas = document.getElementById('next-ball-preview');
+  const nextPreviewEl = document.getElementById('next-ball-preview');
   const loadingScreen = document.getElementById('loading-screen');
 
-  // --- 1. 準備：画像を丸く切り抜く（全自動丸刈り機） ---
+  // --- 1. 画像処理：丸刈り＆リサイズ（ここを修正！） ---
   async function preloadAndCropImages() {
-      // 画面サイズを取得
       gameWidth = container.clientWidth;
       gameHeight = container.clientHeight;
 
       const promises = FRUIT_LEVELS.map((fruit, index) => {
-          return new Promise((resolve, reject) => {
+          return new Promise((resolve) => {
               const img = new Image();
-              img.crossOrigin = "Anonymous"; // これ重要
+              img.crossOrigin = "Anonymous";
               img.src = fruit.img;
               
               img.onload = () => {
-                  // 1. 裏作業用のキャンバスを作る
+                  // ▼ 修正点：キャンバスサイズを「ボールの直径」に固定する
+                  const targetSize = fruit.radius * 2; 
+                  
                   const canvas = document.createElement('canvas');
-                  const size = Math.min(img.width, img.height); // 正方形のサイズを決める
-                  canvas.width = size;
-                  canvas.height = size;
+                  canvas.width = targetSize;
+                  canvas.height = targetSize;
                   const ctx = canvas.getContext('2d');
 
-                  // 2. 丸く切り抜く魔法
+                  // 1. 円形のパスを作る
                   ctx.beginPath();
-                  ctx.arc(size/2, size/2, size/2, 0, Math.PI * 2); // 円を描く
+                  ctx.arc(targetSize/2, targetSize/2, targetSize/2, 0, Math.PI * 2);
                   ctx.closePath();
-                  ctx.clip(); // その形で切り抜く
+                  ctx.clip(); // 切り抜く
 
-                  // 3. 画像を中心に描画（はみ出た部分は切り捨てられる）
-                  const x = (size - img.width) / 2;
-                  const y = (size - img.height) / 2;
-                  ctx.drawImage(img, x, y);
+                  // 2. 画像の「真ん中」を切り取って、小さなキャンバスに縮小して描画
+                  // 元画像の正方形サイズ（短い方の辺に合わせる）
+                  const sourceSize = Math.min(img.width, img.height);
+                  const sx = (img.width - sourceSize) / 2;
+                  const sy = (img.height - sourceSize) / 2;
 
-                  // 4. 丸くなった画像をデータURL（文字列）に変換して保存
+                  // drawImage(元画像, 元X, 元Y, 元幅, 元高, 先X, 先Y, 先幅, 先高)
+                  // ここで強力にリサイズがかかる
+                  ctx.drawImage(img, sx, sy, sourceSize, sourceSize, 0, 0, targetSize, targetSize);
+
+                  // 3. データとして保存
                   circularImages[index] = canvas.toDataURL();
                   resolve();
               };
               img.onerror = () => {
-                  console.error("画像読み込み失敗: " + fruit.img);
-                  // 失敗時は透明なボールになる（エラー回避）
-                  circularImages[index] = null;
+                  console.log("画像なし: " + fruit.img);
+                  circularImages[index] = null; // 画像なしなら色のみ
                   resolve();
               };
           });
@@ -235,7 +225,7 @@
       
       await Promise.all(promises);
       
-      // 準備完了！
+      // ゲーム開始
       loadingScreen.style.opacity = 0;
       setTimeout(() => {
           loadingScreen.style.display = 'none';
@@ -246,7 +236,7 @@
   // --- 2. ゲーム初期化 ---
   function initGame() {
       engine = Engine.create();
-      engine.world.gravity.y = 1.8; // 重力を強めに（すり抜け対策その1）
+      engine.world.gravity.y = 1.5;
 
       render = Render.create({
           element: container,
@@ -260,18 +250,14 @@
           }
       });
 
-      // ▼▼▼ すり抜け対策その2：極厚の床と壁 ▼▼▼
-      const wallThickness = 500; // 500pxの厚み！
+      // 極厚の床と壁（すり抜け防止）
+      const wallThickness = 500;
       const walls = [
-          // 床（画面下に見えない巨大な床を置く）
           Bodies.rectangle(gameWidth/2, gameHeight + wallThickness/2, gameWidth + wallThickness*2, wallThickness, { isStatic: true, render: { fillStyle: '#e6cba8' } }),
-          // 左壁
           Bodies.rectangle(-wallThickness/2, gameHeight/2, wallThickness, gameHeight*2, { isStatic: true, render: { opacity: 0 } }),
-          // 右壁
           Bodies.rectangle(gameWidth + wallThickness/2, gameHeight/2, wallThickness, gameHeight*2, { isStatic: true, render: { opacity: 0 } })
       ];
       World.add(engine.world, walls);
-      // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
       Render.run(render);
       runner = Runner.create();
@@ -283,63 +269,48 @@
       spawnReadyBall();
   }
 
-  // --- 3. ボール生成 ---
+  // --- 3. ボール作成 ---
   function createFruit(x, y, index, isStatic = false) {
       const fruit = FRUIT_LEVELS[index];
-      const texture = circularImages[index]; // 丸くした画像を使う
+      const texture = circularImages[index];
 
       return Bodies.circle(x, y, fruit.radius, {
           isStatic: isStatic,
           label: 'fruit_' + index,
           restitution: 0.2,
           friction: 0.05,
-          density: 0.001 * (index + 1), // 大きいほど重くする
           render: {
               sprite: texture ? {
                   texture: texture,
-                  // 画像をボールのサイズに合わせる縮尺計算
-                  xScale: (fruit.radius * 2) / (texture.width || (fruit.radius*2)), 
-                  yScale: (fruit.radius * 2) / (texture.height || (fruit.radius*2))
+                  xScale: 1, // すでにリサイズ済みなので1倍でOK！
+                  yScale: 1
               } : { fillStyle: '#ffb347' } // 画像エラー時は色
           }
       });
   }
 
-  // 次のボール表示（ここも丸く表示）
   function updateNextBall() {
       nextLevelIndex = Math.floor(Math.random() * 3);
-      const textureUrl = circularImages[nextLevelIndex];
-      
-      const ctx = nextPreviewCanvas.getContext('2d');
-      ctx.clearRect(0, 0, 40, 40); // クリア
-      
-      if (textureUrl) {
-          const img = new Image();
-          img.onload = () => {
-              // プレビュー枠に合わせて描画
-              ctx.drawImage(img, 0, 0, 40, 40);
-          };
-          img.src = textureUrl;
+      const texture = circularImages[nextLevelIndex];
+      if (texture) {
+          nextPreviewEl.style.backgroundImage = `url(${texture})`;
+          nextPreviewEl.style.backgroundColor = 'transparent';
       } else {
-          ctx.fillStyle = '#ffb347';
-          ctx.beginPath();
-          ctx.arc(20, 20, 18, 0, Math.PI*2);
-          ctx.fill();
+          nextPreviewEl.style.backgroundImage = 'none';
+          nextPreviewEl.style.backgroundColor = '#ffb347';
       }
   }
 
-  // 準備ボールを上にセット
   function spawnReadyBall() {
       if (currentBall) return;
-      // 画面中央上(x=gameWidth/2, y=60)に配置
       currentBall = createFruit(gameWidth/2, 60, nextLevelIndex, true);
-      // お化けモード（衝突なし）
+      // お化けモード
       currentBall.collisionFilter = { group: -1, category: 0x0002, mask: 0x0000 }; 
       World.add(engine.world, currentBall);
       canDrop = true;
   }
 
-  // --- 4. 操作イベント ---
+  // --- 4. 操作 ---
   container.addEventListener('touchstart', handleInput, { passive: false });
   container.addEventListener('mousedown', handleInput);
 
@@ -357,20 +328,16 @@
       const rect = container.getBoundingClientRect();
       const x = clientX - rect.left;
 
-      // 位置制限
       const fruit = FRUIT_LEVELS[nextLevelIndex];
       const minX = fruit.radius + 10;
       const maxX = gameWidth - fruit.radius - 10;
       const clampedX = Math.max(minX, Math.min(maxX, x));
 
-      // 1. 移動
       Body.setPosition(currentBall, { x: clampedX, y: 60 });
-
-      // 2. 落下開始！
       Body.setStatic(currentBall, false);
-      // ▼▼▼ すり抜け対策その3：衝突フィルターを確実にリセット ▼▼▼
+      
+      // 物理判定を復活
       currentBall.collisionFilter = { group: 0, category: 0x0001, mask: 0xFFFFFFFF };
-      // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
       currentBall = null;
       canDrop = false;
@@ -379,7 +346,7 @@
       setTimeout(spawnReadyBall, 800);
   }
 
-  // --- 5. 合体（進化）ロジック ---
+  // --- 5. 合体 ---
   function handleCollision(event) {
       const pairs = event.pairs;
       for (let i = 0; i < pairs.length; i++) {
@@ -405,7 +372,6 @@
       }
   }
 
-  // スタート！
   preloadAndCropImages();
 
 </script>
