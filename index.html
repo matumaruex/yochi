@@ -1,1 +1,100 @@
-<h1>テスト成功</h1>
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Elegant Profile</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* ページ全体のデザイン */
+        body {
+            margin: 0;
+            padding: 30px 20px;
+            /* 高級感のある水色グラデーション背景 */
+            background: linear-gradient(135deg, #e0ffff, #b0e0e6);
+            /* エレガントな明朝体フォント */
+            font-family: 'Noto Serif JP', serif;
+            color: #2c3e50;
+            text-align: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        /* チラシ風カードのデザイン */
+        .flyer-container {
+            background-color: rgba(255, 255, 255, 0.98); /* ほぼ白 */
+            padding: 50px 30px;
+            border-radius: 20px;
+            /* 影をつけて浮き上がらせる */
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+            /* 水色の枠線 */
+            border: 3px solid #afeeee;
+            max-width: 400px;
+            width: 100%;
+            position: relative;
+        }
+        /* 画像のデザイン */
+        .profile-image {
+            width: 180px;
+            height: 180px;
+            border-radius: 50%; /* 丸く切り抜く */
+            object-fit: cover;
+            /* 画像の周りに豪華な枠 */
+            border: 5px solid #afeeee;
+            outline: 3px solid #fff;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+            background-color: #eee;
+        }
+        /* テキストのデザイン */
+        .message-main {
+            font-size: 1.6rem;
+            font-weight: bold;
+            margin: 20px 0;
+            color: #008b8b; /* 濃い水色 */
+            letter-spacing: 0.05em;
+        }
+        .message-impact {
+            font-size: 2.5rem; /* さらに大きく */
+            font-weight: 900;
+            margin: 15px 0;
+            color: #dc143c; /* インパクトのある赤系 */
+            text-shadow: 2px 2px 0px rgba(0,0,0,0.1);
+        }
+        .hobby-text {
+            font-size: 1.2rem;
+            margin-top: 40px;
+            line-height: 1.8;
+            display: inline-block;
+            position: relative;
+        }
+        /* 装飾用の線 */
+        .decorative-line {
+            font-size: 1.2rem;
+            color: #afeeee;
+            margin: 20px 0;
+            letter-spacing: 0.5em;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="flyer-container">
+        <img src="PXL_20251109_124527610.jpg" alt="プロフィール画像" class="profile-image">
+        <div class="decorative-line">✧✦✧</div>
+
+        <div class="message-main">お風呂に入ってません！</div>
+        
+        <div class="message-impact">無職！</div>
+        
+        <div class="decorative-line">✧✦✧</div>
+
+        <p class="hobby-text">
+            競馬とタバコが<br>趣味です！
+        </p>
+    </div>
+
+</body>
+</html>
