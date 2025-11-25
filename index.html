@@ -34,7 +34,6 @@
     pointer-events: none;
   }
 
-  /* ゲーム枠：JSでサイズを厳密に制御するため、ここは最低限 */
   #game-container {
       position: relative;
       border: 6px solid #e6cba8;
@@ -47,7 +46,6 @@
 
   canvas { display: block; }
 
-  /* NEXT表示 */
   #next-area {
       position: absolute;
       top: 10px; right: 10px;
@@ -61,6 +59,7 @@
       justify-content: center;
       box-shadow: 0 4px 10px rgba(0,0,0,0.1);
       pointer-events: none;
+      z-index: 10;
   }
   #next-label { font-size: 10px; font-weight: bold; color: #ffb347; margin-bottom: 2px; }
   #next-ball-preview {
@@ -72,7 +71,6 @@
       border: 2px solid #fff8e7;
   }
 
-  /* スコア */
   #score-board {
       position: absolute;
       top: 10px; left: 15px;
@@ -81,10 +79,10 @@
       color: #ff8ba7;
       text-shadow: 1px 1px 0 #fff;
       pointer-events: none;
+      z-index: 10;
   }
   #score-label { font-size: 0.8rem; color: #8d5524; }
 
-  /* ローディング */
   #loading-screen {
       position: absolute;
       top: 0; left: 0; width: 100%; height: 100%;
@@ -106,17 +104,48 @@
   }
   @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-  /* ゲームオーバーライン（天井から少し下） */
+  /* ゲームオーバー画面 */
+  #game-over-screen {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(255, 248, 231, 0.9);
+      display: none; /* 最初は非表示 */
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 50;
+  }
+  #game-over-title { font-size: 2rem; color: #ff7f7f; margin-bottom: 20px; font-weight: bold; }
+  #retry-btn {
+      padding: 15px 40px;
+      font-size: 1.2rem;
+      background: #ffb347;
+      color: white;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      font-family: 'M PLUS Rounded 1c', sans-serif;
+      box-shadow: 0 4px 0 #e5a23d;
+  }
+  #retry-btn:active { transform: translateY(4px); box-shadow: none; }
+
+  /* デンジャーライン */
   #danger-line {
       position: absolute;
       top: 100px; 
       left: 0;
       width: 100%;
       height: 0;
-      border-top: 3px dotted rgba(255, 100, 100, 0.6);
+      border-top: 3px dotted rgba(255, 100, 100, 0.4);
       pointer-events: none;
       z-index: 5;
+      transition: border-color 0.2s;
   }
+  /* 危険な時に赤くなるクラス */
+  .danger-active {
+      border-top: 3px solid rgba(255, 0, 0, 1) !important;
+  }
+
 </style>
 </head>
 <body>
@@ -126,7 +155,13 @@
 <div id="game-container">
     <div id="loading-screen">
         <div class="spinner"></div>
-        <div>準備中だワン...✂️</div>
+        <div>高画質化してるワン...✨</div>
+    </div>
+
+    <div id="game-over-screen">
+        <div id="game-over-title">GAME OVER</div>
+        <div style="font-size: 1.5rem; margin-bottom: 20px;">Score: <span id="final-score">0</span></div>
+        <button id="retry-btn" onclick="location.reload()">もう一度！</button>
     </div>
 
     <div id="score-board">
@@ -145,9 +180,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
 
 <script>
-  // ▼▼▼ 【本家完全再現】サイズ比率設定 ▼▼▼
-  // 画面幅に対するパーセンテージ（直径）
-  // Lv1が10%あるので、横に10個しか並びません（かなり狭い！）
+  // ▼▼▼ サイズ比率設定（本家仕様） ▼▼▼
   const SIZE_RATIOS = [
       0.10, // Lv1: さくらんぼ (10%)
       0.13, // Lv2: いちご
@@ -159,7 +192,7 @@
       0.40, // Lv8: もも
       0.48, // Lv9: パイナップル
       0.53, // Lv10: メロン
-      0.58  // Lv11: スイカ (58% -> 2個並ばない)
+      0.58  // Lv11: スイカ
   ];
 
   const FRUIT_IMAGES = [
@@ -176,8 +209,9 @@
   let isDragging = false;
   let score = 0;
   let gameWidth, gameHeight;
+  let isGameOver = false;
+  let dangerTimer = 0; // ゲームオーバー判定用タイマー
   
-  // 計算後のフルーツ設定リスト
   let fruitLevels = [];
   const circularImages = {}; 
 
@@ -185,19 +219,18 @@
   const scoreEl = document.getElementById('score');
   const nextPreviewEl = document.getElementById('next-ball-preview');
   const loadingScreen = document.getElementById('loading-screen');
+  const gameOverScreen = document.getElementById('game-over-screen');
+  const finalScoreEl = document.getElementById('final-score');
+  const dangerLineEl = document.getElementById('danger-line');
 
-  // --- 1. 画面サイズ計算（黄金比率 2:3） ---
+  // --- 1. 画面サイズ計算 (2:3) ---
   function calculateGameSize() {
-      // 画面の幅と高さの最大値を取得
-      const maxWidth = Math.min(window.innerWidth * 0.95, 450); // 最大幅450px
-      const maxHeight = window.innerHeight * 0.85; // 高さ制限
+      const maxWidth = Math.min(window.innerWidth * 0.95, 450);
+      const maxHeight = window.innerHeight * 0.85;
 
-      // 比率 2:3 (1 : 1.5) を守るための計算
-      // まず幅を基準に高さを決める
       let w = maxWidth;
       let h = w * 1.5;
 
-      // もし高さが画面からはみ出るなら、高さを基準に幅を縮める
       if (h > maxHeight) {
           h = maxHeight;
           w = h / 1.5;
@@ -206,23 +239,21 @@
       gameWidth = w;
       gameHeight = h;
 
-      // コンテナに適用
       container.style.width = `${gameWidth}px`;
       container.style.height = `${gameHeight}px`;
 
-      // フルーツのサイズをピクセルに変換して確定させる
       fruitLevels = SIZE_RATIOS.map((ratio, index) => {
           return {
               level: index + 1,
-              radius: (gameWidth * ratio) / 2, // 直径から半径へ
+              radius: (gameWidth * ratio) / 2,
               img: FRUIT_IMAGES[index]
           };
       });
   }
 
-  // --- 2. 画像処理 ---
+  // --- 2. 画像処理（高画質化 3倍ズーム） ---
   async function preloadAndCropImages() {
-      calculateGameSize(); // まずサイズ確定
+      calculateGameSize();
 
       const promises = fruitLevels.map((fruit, index) => {
           return new Promise((resolve) => {
@@ -231,14 +262,18 @@
               img.src = fruit.img;
               
               img.onload = () => {
-                  const targetSize = fruit.radius * 2; 
+                  // ▼▼▼ 画質アップの秘訣：解像度を3倍で作成する ▼▼▼
+                  const scaleFactor = 3; 
+                  const targetRadius = fruit.radius * scaleFactor;
+                  const canvasSize = targetRadius * 2;
+                  
                   const canvas = document.createElement('canvas');
-                  canvas.width = targetSize;
-                  canvas.height = targetSize;
+                  canvas.width = canvasSize;
+                  canvas.height = canvasSize;
                   const ctx = canvas.getContext('2d');
 
                   ctx.beginPath();
-                  ctx.arc(targetSize/2, targetSize/2, targetSize/2, 0, Math.PI * 2);
+                  ctx.arc(canvasSize/2, canvasSize/2, canvasSize/2, 0, Math.PI * 2);
                   ctx.closePath();
                   ctx.clip(); 
 
@@ -246,7 +281,7 @@
                   const sx = (img.width - sourceSize) / 2;
                   const sy = (img.height - sourceSize) / 2;
 
-                  ctx.drawImage(img, sx, sy, sourceSize, sourceSize, 0, 0, targetSize, targetSize);
+                  ctx.drawImage(img, sx, sy, sourceSize, sourceSize, 0, 0, canvasSize, canvasSize);
 
                   circularImages[index] = canvas.toDataURL();
                   resolve();
@@ -270,7 +305,7 @@
   // --- 3. ゲーム初期化 ---
   function initGame() {
       engine = Engine.create();
-      engine.world.gravity.y = 1.2;
+      engine.world.gravity.y = 0.8; // ▼▼▼ 重力弱め（ふわっと） ▼▼▼
 
       render = Render.create({
           element: container,
@@ -284,7 +319,6 @@
           }
       });
 
-      // 極厚の床と壁
       const wallThickness = 500;
       const walls = [
           Bodies.rectangle(gameWidth/2, gameHeight + wallThickness/2, gameWidth + wallThickness*2, wallThickness, { isStatic: true, render: { fillStyle: '#e6cba8' } }),
@@ -298,6 +332,8 @@
       Runner.run(runner, engine);
       
       Events.on(engine, 'collisionStart', handleCollision);
+      // ▼▼▼ ゲームオーバー監視ループ ▼▼▼
+      Events.on(engine, 'afterUpdate', checkGameOver);
 
       updateNextBall();
       spawnReadyBall();
@@ -317,15 +353,15 @@
           render: {
               sprite: texture ? {
                   texture: texture,
-                  xScale: 1, 
-                  yScale: 1
+                  // ▼▼▼ 3倍で作った画像を1/3に縮小表示（これで高画質！） ▼▼▼
+                  xScale: 1 / 3, 
+                  yScale: 1 / 3
               } : { fillStyle: '#ffb347' } 
           }
       });
   }
 
   function updateNextBall() {
-      // 本家仕様：次はLv1〜Lv5(かき)まで
       nextLevelIndex = Math.floor(Math.random() * 5);
       const texture = circularImages[nextLevelIndex];
       if (texture) {
@@ -338,8 +374,7 @@
   }
 
   function spawnReadyBall() {
-      if (currentBall) return;
-      // 出現位置: X中央, Y=50px固定
+      if (currentBall || isGameOver) return;
       currentBall = createFruit(gameWidth/2, 50, nextLevelIndex, true);
       currentBall.collisionFilter = { group: -1, category: 0x0002, mask: 0x0000 }; 
       World.add(engine.world, currentBall);
@@ -347,23 +382,23 @@
       isDragging = false;
   }
 
-  // --- 5. 操作（掴んで動かす） ---
+  // --- 5. 操作 ---
   
   const handleStart = (e) => {
-      if (!canDrop || !currentBall) return;
+      if (!canDrop || !currentBall || isGameOver) return;
       e.preventDefault();
       isDragging = true;
       moveBall(e);
   };
 
   const handleMove = (e) => {
-      if (!canDrop || !currentBall || !isDragging) return;
+      if (!canDrop || !currentBall || !isDragging || isGameOver) return;
       e.preventDefault();
       moveBall(e);
   };
 
   const handleEnd = (e) => {
-      if (!canDrop || !currentBall || !isDragging) return;
+      if (!canDrop || !currentBall || !isDragging || isGameOver) return;
       e.preventDefault();
       isDragging = false;
       dropBall();
@@ -376,26 +411,20 @@
       } else {
           clientX = e.clientX;
       }
-
       const rect = container.getBoundingClientRect();
       const x = clientX - rect.left;
-
       const fruit = fruitLevels[nextLevelIndex];
-      // 壁際制限
       const minX = fruit.radius + 5;
       const maxX = gameWidth - fruit.radius - 5;
       const clampedX = Math.max(minX, Math.min(maxX, x));
-
       Body.setPosition(currentBall, { x: clampedX, y: 50 });
   }
 
   function dropBall() {
       Body.setStatic(currentBall, false);
       currentBall.collisionFilter = { group: 0, category: 0x0001, mask: 0xFFFFFFFF };
-
       currentBall = null;
       canDrop = false;
-
       updateNextBall();
       setTimeout(spawnReadyBall, 600);
   }
@@ -409,6 +438,7 @@
 
   // --- 6. 合体 ---
   function handleCollision(event) {
+      if (isGameOver) return;
       const pairs = event.pairs;
       for (let i = 0; i < pairs.length; i++) {
           const bodyA = pairs[i].bodyA;
@@ -431,6 +461,46 @@
               }
           }
       }
+  }
+
+  // --- 7. ゲームオーバー判定 ---
+  function checkGameOver() {
+      if (isGameOver) return;
+
+      const bodies = Composite.allBodies(engine.world);
+      const dangerY = 100; // 点線のY座標
+      let isDanger = false;
+
+      // 手持ちのボール以外で、ラインを超えているものを探す
+      for (const body of bodies) {
+          if (!body.isStatic && body !== currentBall) {
+              // 判定を厳しく：半径の半分以上はみ出したらアウト
+              if (body.position.y - body.circleRadius * 0.5 < dangerY) {
+                  isDanger = true;
+                  break;
+              }
+          }
+      }
+
+      if (isDanger) {
+          dangerLineEl.classList.add('danger-active'); // 線を赤く
+          dangerTimer++;
+          
+          // 60fps * 3秒 = 180フレーム
+          if (dangerTimer > 180) {
+              gameOver();
+          }
+      } else {
+          dangerLineEl.classList.remove('danger-active');
+          dangerTimer = 0; // 解除されたらリセット
+      }
+  }
+
+  function gameOver() {
+      isGameOver = true;
+      Runner.stop(runner); // 物理演算ストップ
+      finalScoreEl.innerText = score;
+      gameOverScreen.style.display = 'flex';
   }
 
   preloadAndCropImages();
