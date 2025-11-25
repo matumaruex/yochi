@@ -19,37 +19,35 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: 100dvh; /* アドレスバー対策 */
+    height: 100dvh;
     color: #5a4a42;
     -webkit-tap-highlight-color: transparent;
     overscroll-behavior: none;
   }
 
   h1 { 
-    margin: 5px 0; 
+    margin: 10px 0; 
     font-size: 1.4rem; 
     color: #8d5524;
     text-shadow: 2px 2px 0 #fff;
     flex-shrink: 0;
-    pointer-events: none; /* タイトル誤タップ防止 */
+    pointer-events: none;
   }
 
+  /* ゲーム枠：JSでサイズを厳密に制御するため、ここは最低限 */
   #game-container {
-      width: 95vw;
-      height: 80dvh;
-      max-width: 450px;
-      max-height: 800px;
+      position: relative;
       border: 6px solid #e6cba8;
       border-radius: 20px;
-      background: rgba(255,255,255,0.9);
+      background: rgba(255,255,255,0.95);
       box-shadow: 0 8px 20px rgba(141, 85, 36, 0.2);
-      position: relative;
       overflow: hidden;
       touch-action: none;
   }
 
   canvas { display: block; }
 
+  /* NEXT表示 */
   #next-area {
       position: absolute;
       top: 10px; right: 10px;
@@ -74,6 +72,7 @@
       border: 2px solid #fff8e7;
   }
 
+  /* スコア */
   #score-board {
       position: absolute;
       top: 10px; left: 15px;
@@ -85,6 +84,7 @@
   }
   #score-label { font-size: 0.8rem; color: #8d5524; }
 
+  /* ローディング */
   #loading-screen {
       position: absolute;
       top: 0; left: 0; width: 100%; height: 100%;
@@ -106,13 +106,14 @@
   }
   @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
+  /* ゲームオーバーライン（天井から少し下） */
   #danger-line {
       position: absolute;
-      top: 120px;
+      top: 100px; 
       left: 0;
       width: 100%;
       height: 0;
-      border-top: 3px dotted rgba(255, 100, 100, 0.5);
+      border-top: 3px dotted rgba(255, 100, 100, 0.6);
       pointer-events: none;
       z-index: 5;
   }
@@ -144,19 +145,26 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
 
 <script>
-  // ▼▼▼ 難易度調整（本家比率再現） ▼▼▼
-  const FRUIT_LEVELS = [
-      { level: 1,  radius: 11,  img: '1.png' }, 
-      { level: 2,  radius: 16,  img: '2.png' }, 
-      { level: 3,  radius: 21,  img: '3.png' }, 
-      { level: 4,  radius: 24,  img: '4.png' }, 
-      { level: 5,  radius: 29,  img: '5.png' }, 
-      { level: 6,  radius: 34,  img: '6.png' }, 
-      { level: 7,  radius: 39,  img: '7.png' }, 
-      { level: 8,  radius: 47,  img: '8.png' }, 
-      { level: 9,  radius: 55,  img: '9.png' }, 
-      { level: 10, radius: 65,  img: '10.png' }, 
-      { level: 11, radius: 78,  img: '11.png' }  
+  // ▼▼▼ 【本家完全再現】サイズ比率設定 ▼▼▼
+  // 画面幅に対するパーセンテージ（直径）
+  // Lv1が10%あるので、横に10個しか並びません（かなり狭い！）
+  const SIZE_RATIOS = [
+      0.10, // Lv1: さくらんぼ (10%)
+      0.13, // Lv2: いちご
+      0.16, // Lv3: ぶどう
+      0.19, // Lv4: デコポン
+      0.23, // Lv5: かき
+      0.28, // Lv6: りんご
+      0.33, // Lv7: なし
+      0.40, // Lv8: もも
+      0.48, // Lv9: パイナップル
+      0.53, // Lv10: メロン
+      0.58  // Lv11: スイカ (58% -> 2個並ばない)
+  ];
+
+  const FRUIT_IMAGES = [
+      '1.png', '2.png', '3.png', '4.png', '5.png', '6.png', 
+      '7.png', '8.png', '9.png', '10.png', '11.png'
   ];
 
   const { Engine, Render, Runner, World, Bodies, Body, Events } = Matter;
@@ -164,11 +172,13 @@
   let engine, render, runner;
   let currentBall = null;
   let nextLevelIndex = 0;
-  let canDrop = false; // 操作可能かどうかのフラグ
-  let isDragging = false; // 今ドラッグ中か？
+  let canDrop = false;
+  let isDragging = false;
   let score = 0;
   let gameWidth, gameHeight;
   
+  // 計算後のフルーツ設定リスト
+  let fruitLevels = [];
   const circularImages = {}; 
 
   const container = document.getElementById('game-container');
@@ -176,12 +186,45 @@
   const nextPreviewEl = document.getElementById('next-ball-preview');
   const loadingScreen = document.getElementById('loading-screen');
 
-  // --- 1. 画像処理 ---
-  async function preloadAndCropImages() {
-      gameWidth = container.clientWidth;
-      gameHeight = container.clientHeight;
+  // --- 1. 画面サイズ計算（黄金比率 2:3） ---
+  function calculateGameSize() {
+      // 画面の幅と高さの最大値を取得
+      const maxWidth = Math.min(window.innerWidth * 0.95, 450); // 最大幅450px
+      const maxHeight = window.innerHeight * 0.85; // 高さ制限
 
-      const promises = FRUIT_LEVELS.map((fruit, index) => {
+      // 比率 2:3 (1 : 1.5) を守るための計算
+      // まず幅を基準に高さを決める
+      let w = maxWidth;
+      let h = w * 1.5;
+
+      // もし高さが画面からはみ出るなら、高さを基準に幅を縮める
+      if (h > maxHeight) {
+          h = maxHeight;
+          w = h / 1.5;
+      }
+
+      gameWidth = w;
+      gameHeight = h;
+
+      // コンテナに適用
+      container.style.width = `${gameWidth}px`;
+      container.style.height = `${gameHeight}px`;
+
+      // フルーツのサイズをピクセルに変換して確定させる
+      fruitLevels = SIZE_RATIOS.map((ratio, index) => {
+          return {
+              level: index + 1,
+              radius: (gameWidth * ratio) / 2, // 直径から半径へ
+              img: FRUIT_IMAGES[index]
+          };
+      });
+  }
+
+  // --- 2. 画像処理 ---
+  async function preloadAndCropImages() {
+      calculateGameSize(); // まずサイズ確定
+
+      const promises = fruitLevels.map((fruit, index) => {
           return new Promise((resolve) => {
               const img = new Image();
               img.crossOrigin = "Anonymous";
@@ -224,7 +267,7 @@
       }, 500);
   }
 
-  // --- 2. ゲーム初期化 ---
+  // --- 3. ゲーム初期化 ---
   function initGame() {
       engine = Engine.create();
       engine.world.gravity.y = 1.2;
@@ -241,6 +284,7 @@
           }
       });
 
+      // 極厚の床と壁
       const wallThickness = 500;
       const walls = [
           Bodies.rectangle(gameWidth/2, gameHeight + wallThickness/2, gameWidth + wallThickness*2, wallThickness, { isStatic: true, render: { fillStyle: '#e6cba8' } }),
@@ -259,9 +303,9 @@
       spawnReadyBall();
   }
 
-  // --- 3. ボール作成 ---
+  // --- 4. ボール作成 ---
   function createFruit(x, y, index, isStatic = false) {
-      const fruit = FRUIT_LEVELS[index];
+      const fruit = fruitLevels[index];
       const texture = circularImages[index];
 
       return Bodies.circle(x, y, fruit.radius, {
@@ -281,6 +325,7 @@
   }
 
   function updateNextBall() {
+      // 本家仕様：次はLv1〜Lv5(かき)まで
       nextLevelIndex = Math.floor(Math.random() * 5);
       const texture = circularImages[nextLevelIndex];
       if (texture) {
@@ -294,31 +339,29 @@
 
   function spawnReadyBall() {
       if (currentBall) return;
-      currentBall = createFruit(gameWidth/2, 60, nextLevelIndex, true);
+      // 出現位置: X中央, Y=50px固定
+      currentBall = createFruit(gameWidth/2, 50, nextLevelIndex, true);
       currentBall.collisionFilter = { group: -1, category: 0x0002, mask: 0x0000 }; 
       World.add(engine.world, currentBall);
       canDrop = true;
       isDragging = false;
   }
 
-  // --- 4. 操作（ドラッグ＆ドロップ実装） ---
+  // --- 5. 操作（掴んで動かす） ---
   
-  // タッチ開始
   const handleStart = (e) => {
       if (!canDrop || !currentBall) return;
       e.preventDefault();
       isDragging = true;
-      moveBall(e); // 押した瞬間にその位置へ
+      moveBall(e);
   };
 
-  // 移動中
   const handleMove = (e) => {
       if (!canDrop || !currentBall || !isDragging) return;
       e.preventDefault();
       moveBall(e);
   };
 
-  // 指を離した時（落下！）
   const handleEnd = (e) => {
       if (!canDrop || !currentBall || !isDragging) return;
       e.preventDefault();
@@ -326,7 +369,6 @@
       dropBall();
   };
 
-  // ボールを指の位置に追従させる処理
   function moveBall(e) {
       let clientX;
       if (e.type.startsWith('touch')) {
@@ -338,38 +380,34 @@
       const rect = container.getBoundingClientRect();
       const x = clientX - rect.left;
 
-      const fruit = FRUIT_LEVELS[nextLevelIndex];
-      const minX = fruit.radius + 10;
-      const maxX = gameWidth - fruit.radius - 10;
+      const fruit = fruitLevels[nextLevelIndex];
+      // 壁際制限
+      const minX = fruit.radius + 5;
+      const maxX = gameWidth - fruit.radius - 5;
       const clampedX = Math.max(minX, Math.min(maxX, x));
 
-      // 物理演算の座標を強制更新
-      Body.setPosition(currentBall, { x: clampedX, y: 60 });
+      Body.setPosition(currentBall, { x: clampedX, y: 50 });
   }
 
-  // 落下処理
   function dropBall() {
       Body.setStatic(currentBall, false);
       currentBall.collisionFilter = { group: 0, category: 0x0001, mask: 0xFFFFFFFF };
 
       currentBall = null;
-      canDrop = false; // 次が出るまで操作禁止
+      canDrop = false;
 
       updateNextBall();
       setTimeout(spawnReadyBall, 600);
   }
 
-  // イベントリスナー登録
   container.addEventListener('touchstart', handleStart, { passive: false });
   container.addEventListener('touchmove', handleMove, { passive: false });
   container.addEventListener('touchend', handleEnd, { passive: false });
-  
-  // PC/マウス操作用
   container.addEventListener('mousedown', handleStart);
-  window.addEventListener('mousemove', handleMove); // 画面外に出ても追従するようにwindow
-  window.addEventListener('mouseup', handleEnd);    // 画面外で離しても落ちるようにwindow
+  window.addEventListener('mousemove', handleMove);
+  window.addEventListener('mouseup', handleEnd);
 
-  // --- 5. 合体 ---
+  // --- 6. 合体 ---
   function handleCollision(event) {
       const pairs = event.pairs;
       for (let i = 0; i < pairs.length; i++) {
@@ -379,7 +417,7 @@
           if (bodyA.label.startsWith('fruit_') && bodyB.label === bodyA.label) {
               const level = parseInt(bodyA.label.split('_')[1]);
 
-              if (level < FRUIT_LEVELS.length - 1) {
+              if (level < fruitLevels.length - 1) {
                   const midX = (bodyA.position.x + bodyB.position.x) / 2;
                   const midY = (bodyA.position.y + bodyB.position.y) / 2;
 
