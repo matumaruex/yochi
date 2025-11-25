@@ -104,12 +104,11 @@
   }
   @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-  /* ゲームオーバー画面 */
   #game-over-screen {
       position: absolute;
       top: 0; left: 0; width: 100%; height: 100%;
       background: rgba(255, 248, 231, 0.9);
-      display: none; /* 最初は非表示 */
+      display: none;
       flex-direction: column;
       justify-content: center;
       align-items: center;
@@ -129,7 +128,6 @@
   }
   #retry-btn:active { transform: translateY(4px); box-shadow: none; }
 
-  /* デンジャーライン */
   #danger-line {
       position: absolute;
       top: 100px; 
@@ -141,7 +139,6 @@
       z-index: 5;
       transition: border-color 0.2s;
   }
-  /* 危険な時に赤くなるクラス */
   .danger-active {
       border-top: 3px solid rgba(255, 0, 0, 1) !important;
   }
@@ -155,7 +152,7 @@
 <div id="game-container">
     <div id="loading-screen">
         <div class="spinner"></div>
-        <div>高画質化してるワン...✨</div>
+        <div>準備中だワン...✂️</div>
     </div>
 
     <div id="game-over-screen">
@@ -200,17 +197,21 @@
       '7.png', '8.png', '9.png', '10.png', '11.png'
   ];
 
-  const { Engine, Render, Runner, World, Bodies, Body, Events } = Matter;
+  const { Engine, Render, Runner, World, Bodies, Body, Events, Composite } = Matter;
 
   let engine, render, runner;
   let currentBall = null;
-  let nextLevelIndex = 0;
+  // ▼▼▼ 修正: 変数を2つに分離（手元と次） ▼▼▼
+  let currLevelIndex = 0; // 手元のフルーツID
+  let nextLevelIndex = 0; // 次のフルーツID
+  // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+  
   let canDrop = false;
   let isDragging = false;
   let score = 0;
   let gameWidth, gameHeight;
   let isGameOver = false;
-  let dangerTimer = 0; // ゲームオーバー判定用タイマー
+  let dangerTimer = 0;
   
   let fruitLevels = [];
   const circularImages = {}; 
@@ -262,7 +263,6 @@
               img.src = fruit.img;
               
               img.onload = () => {
-                  // ▼▼▼ 画質アップの秘訣：解像度を3倍で作成する ▼▼▼
                   const scaleFactor = 3; 
                   const targetRadius = fruit.radius * scaleFactor;
                   const canvasSize = targetRadius * 2;
@@ -305,7 +305,7 @@
   // --- 3. ゲーム初期化 ---
   function initGame() {
       engine = Engine.create();
-      engine.world.gravity.y = 0.8; // ▼▼▼ 重力弱め（ふわっと） ▼▼▼
+      engine.world.gravity.y = 0.8; 
 
       render = Render.create({
           element: container,
@@ -332,11 +332,16 @@
       Runner.run(runner, engine);
       
       Events.on(engine, 'collisionStart', handleCollision);
-      // ▼▼▼ ゲームオーバー監視ループ ▼▼▼
       Events.on(engine, 'afterUpdate', checkGameOver);
 
-      updateNextBall();
-      spawnReadyBall();
+      // ▼▼▼ 修正: 初期化時に手元とNEXTを別々に抽選 ▼▼▼
+      // 本家仕様：Lv1(さくらんぼ)〜Lv5(かき)までが出現
+      currLevelIndex = Math.floor(Math.random() * 5);
+      nextLevelIndex = Math.floor(Math.random() * 5);
+      
+      updateNextView(); // NEXT表示更新
+      spawnReadyBall(); // 手元ボール生成
+      // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
   }
 
   // --- 4. ボール作成 ---
@@ -353,7 +358,6 @@
           render: {
               sprite: texture ? {
                   texture: texture,
-                  // ▼▼▼ 3倍で作った画像を1/3に縮小表示（これで高画質！） ▼▼▼
                   xScale: 1 / 3, 
                   yScale: 1 / 3
               } : { fillStyle: '#ffb347' } 
@@ -361,8 +365,8 @@
       });
   }
 
-  function updateNextBall() {
-      nextLevelIndex = Math.floor(Math.random() * 5);
+  // ▼▼▼ NEXT表示の更新専用関数 ▼▼▼
+  function updateNextView() {
       const texture = circularImages[nextLevelIndex];
       if (texture) {
           nextPreviewEl.style.backgroundImage = `url(${texture})`;
@@ -375,7 +379,8 @@
 
   function spawnReadyBall() {
       if (currentBall || isGameOver) return;
-      currentBall = createFruit(gameWidth/2, 50, nextLevelIndex, true);
+      // 手元のボール(currLevelIndex)を生成
+      currentBall = createFruit(gameWidth/2, 50, currLevelIndex, true);
       currentBall.collisionFilter = { group: -1, category: 0x0002, mask: 0x0000 }; 
       World.add(engine.world, currentBall);
       canDrop = true;
@@ -413,7 +418,9 @@
       }
       const rect = container.getBoundingClientRect();
       const x = clientX - rect.left;
-      const fruit = fruitLevels[nextLevelIndex];
+      
+      // 手元のフルーツサイズで壁際判定
+      const fruit = fruitLevels[currLevelIndex];
       const minX = fruit.radius + 5;
       const maxX = gameWidth - fruit.radius - 5;
       const clampedX = Math.max(minX, Math.min(maxX, x));
@@ -425,8 +432,17 @@
       currentBall.collisionFilter = { group: 0, category: 0x0001, mask: 0xFFFFFFFF };
       currentBall = null;
       canDrop = false;
-      updateNextBall();
+
+      // ▼▼▼ 修正: 落とした瞬間にローテーション ▼▼▼
+      // 1. NEXTにあったやつが、次の手元(Current)になる
+      currLevelIndex = nextLevelIndex;
+      // 2. 新しいNEXTを抽選する
+      nextLevelIndex = Math.floor(Math.random() * 5);
+      
+      // 3. 表示と次弾装填
+      updateNextView();
       setTimeout(spawnReadyBall, 600);
+      // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
   }
 
   container.addEventListener('touchstart', handleStart, { passive: false });
@@ -471,10 +487,8 @@
       const dangerY = 100; // 点線のY座標
       let isDanger = false;
 
-      // 手持ちのボール以外で、ラインを超えているものを探す
       for (const body of bodies) {
           if (!body.isStatic && body !== currentBall) {
-              // 判定を厳しく：半径の半分以上はみ出したらアウト
               if (body.position.y - body.circleRadius * 0.5 < dangerY) {
                   isDanger = true;
                   break;
@@ -483,22 +497,20 @@
       }
 
       if (isDanger) {
-          dangerLineEl.classList.add('danger-active'); // 線を赤く
+          dangerLineEl.classList.add('danger-active');
           dangerTimer++;
-          
-          // 60fps * 3秒 = 180フレーム
-          if (dangerTimer > 180) {
+          if (dangerTimer > 180) { // 3秒
               gameOver();
           }
       } else {
           dangerLineEl.classList.remove('danger-active');
-          dangerTimer = 0; // 解除されたらリセット
+          dangerTimer = 0;
       }
   }
 
   function gameOver() {
       isGameOver = true;
-      Runner.stop(runner); // 物理演算ストップ
+      Runner.stop(runner);
       finalScoreEl.innerText = score;
       gameOverScreen.style.display = 'flex';
   }
