@@ -1,100 +1,384 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Elegant Profile</title>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&display=swap" rel="stylesheet">
-    <style>
-        /* ページ全体のデザイン */
-        body {
-            margin: 0;
-            padding: 30px 20px;
-            /* 高級感のある水色グラデーション背景 */
-            background: linear-gradient(135deg, #e0ffff, #b0e0e6);
-            /* エレガントな明朝体フォント */
-            font-family: 'Noto Serif JP', serif;
-            color: #2c3e50;
-            text-align: center;
-            min-height: 100vh;
-            box-sizing: border-box;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        /* チラシ風カードのデザイン */
-        .flyer-container {
-            background-color: rgba(255, 255, 255, 0.98); /* ほぼ白 */
-            padding: 50px 30px;
-            border-radius: 20px;
-            /* 影をつけて浮き上がらせる */
-            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
-            /* 水色の枠線 */
-            border: 3px solid #afeeee;
-            max-width: 400px;
-            width: 100%;
-            position: relative;
-        }
-        /* 画像のデザイン */
-        .profile-image {
-            width: 180px;
-            height: 180px;
-            border-radius: 50%; /* 丸く切り抜く */
-            object-fit: cover;
-            /* 画像の周りに豪華な枠 */
-            border: 5px solid #afeeee;
-            outline: 3px solid #fff;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
-            margin-bottom: 30px;
-            background-color: #eee;
-        }
-        /* テキストのデザイン */
-        .message-main {
-            font-size: 1.6rem;
-            font-weight: bold;
-            margin: 20px 0;
-            color: #008b8b; /* 濃い水色 */
-            letter-spacing: 0.05em;
-        }
-        .message-impact {
-            font-size: 2.5rem; /* さらに大きく */
-            font-weight: 900;
-            margin: 15px 0;
-            color: #dc143c; /* インパクトのある赤系 */
-            text-shadow: 2px 2px 0px rgba(0,0,0,0.1);
-        }
-        .hobby-text {
-            font-size: 1.2rem;
-            margin-top: 40px;
-            line-height: 1.8;
-            display: inline-block;
-            position: relative;
-        }
-        /* 装飾用の線 */
-        .decorative-line {
-            font-size: 1.2rem;
-            color: #afeeee;
-            margin: 20px 0;
-            letter-spacing: 0.5em;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>彼女スイカゲーム 🐾</title>
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  /* ▼▼▼ ポメ風デザイン ▼▼▼ */
+  body {
+    margin: 0;
+    font-family: 'M PLUS Rounded 1c', sans-serif;
+    background-color: #fff8e7; /* クリーム色 */
+    background-image: radial-gradient(#fff0d0 10%, transparent 10%); /* 水玉 */
+    background-size: 20px 20px;
+    overflow: hidden;
+    touch-action: none; /* スマホのスクロール無効化 */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    color: #5a4a42;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  h1 { 
+    margin: 5px 0 10px 0; 
+    font-size: 1.4rem; 
+    color: #8d5524;
+    text-shadow: 2px 2px 0 #fff; 
+  }
+
+  /* ゲームのメイン枠 */
+  #game-container {
+      width: 360px; /* スマホの横幅に合わせる */
+      height: 600px;
+      border: 6px solid #e6cba8; /* 優しい茶色の枠 */
+      border-radius: 20px;
+      background: rgba(255,255,255,0.85);
+      box-shadow: 0 8px 20px rgba(141, 85, 36, 0.2);
+      position: relative;
+      overflow: hidden;
+  }
+
+  canvas {
+      display: block;
+      border-radius: 14px; /* キャンバス自体も少し丸く */
+  }
+
+  /* 次のボール表示エリア */
+  #next-area {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      width: 70px;
+      height: 80px;
+      background: #fff;
+      border: 3px solid #ffb347;
+      border-radius: 15px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  }
+  #next-label { font-size: 10px; font-weight: bold; color: #ffb347; margin-bottom: 2px; }
+  #next-ball-preview {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background-size: cover;
+      background-position: center;
+      border: 2px solid #fff8e7;
+  }
+
+  /* スコア表示 */
+  #score-board {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #ff8ba7;
+      text-shadow: 1px 1px 0 #fff;
+      pointer-events: none;
+  }
+  #score-label { font-size: 0.8rem; color: #8d5524; }
+
+  /* ローディング画面 */
+  #loading-screen {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: #fff8e7;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+      transition: opacity 0.5s;
+  }
+  .spinner {
+      width: 40px; height: 40px;
+      border: 5px solid #e6cba8;
+      border-top: 5px solid #ffb347;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 10px;
+  }
+  @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+  /* ゲームオーバーライン（点線） */
+  #danger-line {
+      position: absolute;
+      top: 100px; /* 上から100px */
+      left: 0;
+      width: 100%;
+      height: 0;
+      border-top: 2px dashed rgba(255, 0, 0, 0.3);
+      pointer-events: none;
+      z-index: 5;
+  }
+</style>
 </head>
 <body>
 
-    <div class="flyer-container">
-        <img src="PXL_20251109_124527610.jpg" alt="プロフィール画像" class="profile-image">
-        <div class="decorative-line">✧✦✧</div>
+<h1>🐾 彼女スイカゲーム 🐶</h1>
 
-        <div class="message-main">お風呂に入ってません！</div>
-        
-        <div class="message-impact">無職！</div>
-        
-        <div class="decorative-line">✧✦✧</div>
-
-        <p class="hobby-text">
-            競馬とタバコが<br>趣味です！
-        </p>
+<div id="game-container">
+    <div id="loading-screen">
+        <div class="spinner"></div>
+        <div>画像を準備中だワン...</div>
     </div>
 
+    <div id="score-board">
+        <span id="score-label">Score</span><br>
+        <span id="score">0</span>
+    </div>
+    
+    <div id="next-area">
+        <div id="next-label">NEXT</div>
+        <div id="next-ball-preview"></div>
+    </div>
+    
+    <div id="danger-line"></div>
+    </div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+
+<script>
+  // ▼▼▼ 11段階の設定（半径と画像） ▼▼▼
+  // 画像は 1.png 〜 11.png を読み込みます
+  // radius: ボールの大きさ（ピクセル）
+  const FRUIT_LEVELS = [
+      { level: 1,  radius: 22,  img: '1.png' },  // さくらんぼ役
+      { level: 2,  radius: 32,  img: '2.png' },  // いちご役
+      { level: 3,  radius: 40,  img: '3.png' },  // ぶどう役
+      { level: 4,  radius: 45,  img: '4.png' },  // デコポン役
+      { level: 5,  radius: 55,  img: '5.png' },  // かき役
+      { level: 6,  radius: 62,  img: '6.png' },  // りんご役
+      { level: 7,  radius: 70,  img: '7.png' },  // なし役
+      { level: 8,  radius: 85,  img: '8.png' },  // もも役
+      { level: 9,  radius: 95,  img: '9.png' },  // パイナップル役
+      { level: 10, radius: 105, img: '10.png' }, // メロン役
+      { level: 11, radius: 120, img: '11.png' }  // スイカ役（彼女！）
+  ];
+  // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
+  const { Engine, Render, Runner, World, Bodies, Body, Events, Composite } = Matter;
+
+  // ゲーム変数
+  let engine, render, runner;
+  let currentBall = null;
+  let nextLevelIndex = 0;
+  let canDrop = false;
+  let score = 0;
+  
+  // 画像の拡大縮小率を保存する辞書
+  const imageScales = {}; 
+
+  const container = document.getElementById('game-container');
+  const scoreEl = document.getElementById('score');
+  const nextPreviewEl = document.getElementById('next-ball-preview');
+  const loadingScreen = document.getElementById('loading-screen');
+
+  // --- 1. 準備：画像を先読みしてサイズを計算 ---
+  async function preloadImages() {
+      const promises = FRUIT_LEVELS.map((fruit, index) => {
+          return new Promise((resolve, reject) => {
+              const img = new Image();
+              img.src = fruit.img;
+              img.onload = () => {
+                  // 画像の元の大きさから、ボールの半径に合わせるための縮尺を計算
+                  // (半径 * 2) / 画像の幅 = 縮尺
+                  const scale = (fruit.radius * 2.1) / img.width; // 2.1は少し余裕を持たせるため
+                  imageScales[index] = scale;
+                  resolve();
+              };
+              img.onerror = () => {
+                  console.error("画像読み込み失敗: " + fruit.img);
+                  // 失敗時はとりあえず適当なスケールを入れる
+                  imageScales[index] = 1; 
+                  resolve();
+              };
+          });
+      });
+      
+      await Promise.all(promises);
+      
+      // 読み込み完了したらゲーム開始
+      loadingScreen.style.opacity = 0;
+      setTimeout(() => {
+          loadingScreen.style.display = 'none';
+          initGame();
+      }, 500);
+  }
+
+  // --- 2. ゲーム初期化 ---
+  function initGame() {
+      // エンジン作成
+      engine = Engine.create();
+      engine.world.gravity.y = 1.5; // 重力を少し強めに（キビキビさせる）
+
+      // レンダラー作成
+      render = Render.create({
+          element: container,
+          engine: engine,
+          options: {
+              width: 360,
+              height: 600,
+              wireframes: false,
+              background: 'transparent',
+              pixelRatio: window.devicePixelRatio // スマホで綺麗に見せる
+          }
+      });
+
+      // 壁と床を作成
+      const walls = [
+          Bodies.rectangle(180, 615, 360, 30, { isStatic: true, render: { fillStyle: '#e6cba8' } }), // 床
+          Bodies.rectangle(-15, 300, 30, 600, { isStatic: true, render: { fillStyle: '#e6cba8' } }), // 左壁
+          Bodies.rectangle(375, 300, 30, 600, { isStatic: true, render: { fillStyle: '#e6cba8' } })  // 右壁
+      ];
+      World.add(engine.world, walls);
+
+      // 最初のセットアップ
+      Render.run(render);
+      runner = Runner.create();
+      Runner.run(runner, engine);
+      
+      // 衝突イベント設定
+      Events.on(engine, 'collisionStart', handleCollision);
+
+      // 最初のボール生成
+      updateNextBall();
+      spawnReadyBall();
+  }
+
+  // --- 3. ボール生成ロジック ---
+  function createFruit(x, y, index, isStatic = false) {
+      const fruit = FRUIT_LEVELS[index];
+      const scale = imageScales[index] || 1;
+
+      return Bodies.circle(x, y, fruit.radius, {
+          isStatic: isStatic,
+          label: 'fruit_' + index, // レベルをラベルに保存
+          restitution: 0.2, // 跳ね返り
+          friction: 0.05,   // 摩擦
+          render: {
+              sprite: {
+                  texture: fruit.img,
+                  xScale: scale,
+                  yScale: scale
+              }
+          }
+      });
+  }
+
+  // 次のボールを決める
+  function updateNextBall() {
+      // 最初はLv1(0)〜Lv3(2)の間でランダムに出現
+      nextLevelIndex = Math.floor(Math.random() * 3);
+      
+      // NEXT表示を更新
+      const nextFruit = FRUIT_LEVELS[nextLevelIndex];
+      nextPreviewEl.style.backgroundImage = `url(${nextFruit.img})`;
+  }
+
+  // 画面上に落とす前のボールをセット
+  function spawnReadyBall() {
+      if (currentBall) return;
+      
+      // 画面中央上(x=180, y=50)に配置
+      currentBall = createFruit(180, 50, nextLevelIndex, true);
+      // 衝突判定を一時的に無効化
+      currentBall.collisionFilter = { group: -1 };
+      
+      World.add(engine.world, currentBall);
+      canDrop = true;
+  }
+
+  // --- 4. 操作イベント ---
+  container.addEventListener('touchstart', handleInput, { passive: false });
+  container.addEventListener('mousedown', handleInput);
+
+  function handleInput(e) {
+      if (!canDrop || !currentBall) return;
+      e.preventDefault();
+
+      // タップ位置のX座標を取得
+      let clientX;
+      if (e.type === 'touchstart') {
+          clientX = e.touches[0].clientX;
+      } else {
+          clientX = e.clientX;
+      }
+
+      const rect = container.getBoundingClientRect();
+      const x = clientX - rect.left;
+
+      // 壁に埋まらないように位置制限
+      const fruit = FRUIT_LEVELS[nextLevelIndex];
+      const minX = fruit.radius + 15; // 壁の厚み考慮
+      const maxX = 360 - fruit.radius - 15;
+      const clampedX = Math.max(minX, Math.min(maxX, x));
+
+      // 1. まず指の位置に移動
+      Body.setPosition(currentBall, { x: clampedX, y: 50 });
+
+      // 2. 固定解除して落下！
+      Body.setStatic(currentBall, false);
+      currentBall.collisionFilter = { group: 0 }; // 衝突有効化
+      
+      currentBall = null;
+      canDrop = false;
+
+      // 3. 次の準備
+      updateNextBall();
+      setTimeout(spawnReadyBall, 800); // 0.8秒後に次をセット
+  }
+
+  // --- 5. 合体（進化）ロジック ---
+  function handleCollision(event) {
+      const pairs = event.pairs;
+
+      for (let i = 0; i < pairs.length; i++) {
+          const bodyA = pairs[i].bodyA;
+          const bodyB = pairs[i].bodyB;
+
+          // 両方がフルーツかどうか確認
+          if (bodyA.label.startsWith('fruit_') && bodyB.label === bodyA.label) {
+              const level = parseInt(bodyA.label.split('_')[1]);
+
+              // 最大レベル(11=index 10)でなければ進化
+              if (level < FRUIT_LEVELS.length - 1) {
+                  // 衝突した位置の中間
+                  const midX = (bodyA.position.x + bodyB.position.x) / 2;
+                  const midY = (bodyA.position.y + bodyB.position.y) / 2;
+
+                  // 古いボールを消す
+                  World.remove(engine.world, [bodyA, bodyB]);
+
+                  // 新しいボールを作る（1ランク上）
+                  const newBall = createFruit(midX, midY, level + 1);
+                  World.add(engine.world, newBall);
+
+                  // スコア加算
+                  // 小さい玉ほど低い点、大きい玉ほど高い点
+                  score += (level + 1) * 2;
+                  scoreEl.textContent = score;
+                  
+                  // 同じフレームで多重衝突しないようにID書き換え等の工夫もできるが
+                  // 今回はシンプルに削除で対応
+                  break; // 1フレームに1進化に制限してバグ防止
+              }
+          }
+      }
+  }
+
+  // スタート！
+  preloadImages();
+
+</script>
 </body>
 </html>
