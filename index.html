@@ -3,16 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-<title>よっちGame 🐾</title>
+<title>よちGAME ❤️</title>
 <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700&display=swap" rel="stylesheet">
 <style>
-  /* ▼▼▼ デザイン設定 ▼▼▼ */
+  /* ▼▼▼ デザイン設定（パステルピンク＆ブルー） ▼▼▼ */
   body {
     margin: 0;
     font-family: 'M PLUS Rounded 1c', sans-serif;
-    background-color: #fff8e7;
-    background-image: radial-gradient(#fff0d0 10%, transparent 10%);
-    background-size: 20px 20px;
+    /* 背景色：薄いピンク */
+    background-color: #fff0f5;
+    background-image: url('bg.jpg');
+    background-size: cover;
+    background-position: center bottom;
+    background-repeat: no-repeat;
     overflow: hidden;
     touch-action: none;
     display: flex;
@@ -26,32 +29,74 @@
   }
 
   h1 { 
-    margin: 10px 0; 
+    margin: 5px 0; 
     font-size: 1.4rem; 
-    color: #8d5524;
-    text-shadow: 2px 2px 0 #fff;
+    color: #fff; 
+    /* 影：パステルブルーとピンクのグラデーション風 */
+    text-shadow: 2px 2px 0 #87cefa, -1px -1px 0 #ffb6c1, 1px -1px 0 #87cefa, -1px 1px 0 #ffb6c1, 1px 1px 0 #87cefa;
     flex-shrink: 0;
     pointer-events: none;
+    z-index: 10;
   }
 
+  /* ゲーム枠 */
   #game-container {
       position: relative;
-      border: 6px solid #e6cba8;
+      width: 90vw; 
+      height: 70dvh; 
+      max-width: 450px;
+      max-height: 800px;
+      /* 枠線：パステルピンク */
+      border: 6px solid #ffb6c1;
       border-radius: 20px;
-      background: rgba(255,255,255,0.95);
-      box-shadow: 0 8px 20px rgba(141, 85, 36, 0.2);
-      overflow: hidden;
+      background: rgba(255, 255, 255, 0.6);
+      box-shadow: 0 8px 20px rgba(135, 206, 250, 0.4); /* 影は水色で爽やかに */
+      overflow: visible; 
       touch-action: none;
   }
 
   canvas { display: block; }
 
-  #next-area {
+  /* プレイヤーキャラ (cloud.png 1枚で対応) */
+  #cloud-char {
       position: absolute;
-      top: 10px; right: 10px;
-      width: 60px; height: 70px;
-      background: #fff;
-      border: 3px solid #ffb347;
+      top: -45px; /* 手の位置調整のため少し上げました */
+      left: 50%;
+      transform: translateX(-50%);
+      width: 150px; 
+      height: 100px; /* 少し縦長に確保 */
+      background-image: url('cloud.png');
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center bottom;
+      filter: drop-shadow(0 5px 5px rgba(0,0,0,0.2));
+      display: none; 
+      z-index: 20;
+      pointer-events: none;
+  }
+
+  /* 衝撃波エフェクト */
+  .shockwave {
+      position: absolute;
+      border-radius: 50%;
+      border: 4px solid rgba(255, 182, 193, 0.8);
+      background: transparent;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      animation: pop 0.4s ease-out forwards;
+      z-index: 5;
+  }
+  @keyframes pop {
+      0% { transform: translate(-50%, -50%) scale(0.8); opacity: 1; border-width: 10px; }
+      100% { transform: translate(-50%, -50%) scale(1.8); opacity: 0; border-width: 0px; }
+  }
+
+  /* UI共通スタイル */
+  .ui-box {
+      position: absolute;
+      background: rgba(255, 255, 255, 0.8);
+      /* 枠線：パステルブルー */
+      border: 3px solid #87cefa;
       border-radius: 12px;
       display: flex;
       flex-direction: column;
@@ -61,434 +106,455 @@
       pointer-events: none;
       z-index: 10;
   }
-  #next-label { font-size: 10px; font-weight: bold; color: #ffb347; margin-bottom: 2px; }
+
+  #next-area { top: 10px; right: 10px; width: 60px; height: 70px; }
+  #next-label { font-size: 10px; font-weight: bold; color: #87cefa; margin-bottom: 2px; }
   #next-ball-preview {
       width: 35px; height: 35px;
       border-radius: 50%;
       background-size: contain;
       background-repeat: no-repeat;
       background-position: center;
-      border: 2px solid #fff8e7;
+      border: 2px solid #fff;
   }
 
-  #score-board {
-      position: absolute;
-      top: 10px; left: 15px;
-      font-size: 1.5rem;
-      font-weight: bold;
-      color: #ff8ba7;
-      text-shadow: 1px 1px 0 #fff;
-      pointer-events: none;
-      z-index: 10;
-  }
-  #score-label { font-size: 0.8rem; color: #8d5524; }
+  #score-board { top: 10px; left: 15px; border: none; background: none; box-shadow: none; align-items: flex-start; }
+  #score-board .score-text { font-size: 1.5rem; font-weight: bold; color: #ff69b4; text-shadow: 1px 1px 0 #fff; }
+  #score-label { font-size: 0.8rem; color: #5a4a42; }
 
-  #loading-screen {
+  /* オーバーレイ画面 */
+  .overlay {
       position: absolute;
       top: 0; left: 0; width: 100%; height: 100%;
-      background: #fff8e7;
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      z-index: 100;
-      transition: opacity 0.5s;
+      z-index: 50;
+      border-radius: 15px;
   }
+  #loading-screen { background: #fff0f5; z-index: 100; transition: opacity 0.5s; }
+  #game-over-screen { background: rgba(255, 240, 245, 0.95); display: none; }
+
   .spinner {
       width: 40px; height: 40px;
-      border: 5px solid #e6cba8;
-      border-top: 5px solid #ffb347;
+      border: 5px solid #ffb6c1;
+      border-top: 5px solid #87cefa;
       border-radius: 50%;
       animation: spin 1s linear infinite;
       margin-bottom: 10px;
   }
   @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-  #game-over-screen {
-      position: absolute;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(255, 248, 231, 0.9);
-      display: none;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      z-index: 50;
-  }
-  #game-over-title { font-size: 2rem; color: #ff7f7f; margin-bottom: 20px; font-weight: bold; }
+  #game-over-title { font-size: 2rem; color: #ff69b4; margin-bottom: 20px; font-weight: bold; }
   #retry-btn {
       padding: 15px 40px;
       font-size: 1.2rem;
-      background: #ffb347;
+      background: #87cefa;
       color: white;
       border: none;
       border-radius: 50px;
       cursor: pointer;
       font-family: 'M PLUS Rounded 1c', sans-serif;
-      box-shadow: 0 4px 0 #e5a23d;
+      box-shadow: 0 4px 0 #4682b4;
   }
   #retry-btn:active { transform: translateY(4px); box-shadow: none; }
 
   #danger-line {
       position: absolute;
-      top: 100px; 
-      left: 0;
-      width: 100%;
-      height: 0;
-      border-top: 3px dotted rgba(255, 100, 100, 0.4);
+      top: 20%; left: 0; width: 100%; height: 0;
+      border-top: 3px dotted rgba(255, 105, 180, 0.5);
       pointer-events: none;
       z-index: 5;
       transition: border-color 0.2s;
   }
-  .danger-active {
-      border-top: 3px solid rgba(255, 0, 0, 1) !important;
-  }
-
+  .danger-active { border-top: 3px solid rgba(255, 20, 147, 1) !important; }
 </style>
 </head>
 <body>
 
-<h1>🐾 よっちGame 🐶</h1>
+<h1>❤️ よちGAME 🐶</h1>
 
 <div id="game-container">
-    <div id="loading-screen">
+    <div id="loading-screen" class="overlay">
         <div class="spinner"></div>
-        <div>準備中だワン...✂️</div>
+        <div>準備中だよ...💕</div>
     </div>
 
-    <div id="game-over-screen">
+    <div id="game-over-screen" class="overlay">
         <div id="game-over-title">GAME OVER</div>
         <div style="font-size: 1.5rem; margin-bottom: 20px;">Score: <span id="final-score">0</span></div>
         <button id="retry-btn" onclick="location.reload()">もう一度！</button>
     </div>
 
-    <div id="score-board">
-        <span id="score-label">Score</span><br>
-        <span id="score">0</span>
+    <div id="score-board" class="ui-box">
+        <span id="score-label">Score</span>
+        <span id="score" class="score-text">0</span>
     </div>
     
-    <div id="next-area">
+    <div id="next-area" class="ui-box">
         <div id="next-label">NEXT</div>
         <div id="next-ball-preview"></div>
     </div>
     
     <div id="danger-line"></div>
+    <div id="cloud-char"></div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
 
 <script>
-  // ▼▼▼ サイズ比率設定（本家仕様） ▼▼▼
-  const SIZE_RATIOS = [
-      0.10, // Lv1: さくらんぼ (10%)
-      0.13, // Lv2: いちご
-      0.16, // Lv3: ぶどう
-      0.19, // Lv4: デコポン
-      0.23, // Lv5: かき
-      0.28, // Lv6: りんご
-      0.33, // Lv7: なし
-      0.40, // Lv8: もも
-      0.48, // Lv9: パイナップル
-      0.53, // Lv10: メロン
-      0.58  // Lv11: スイカ
-  ];
+  /**
+   * ==========================================
+   * CONFIG: ゲーム設定
+   * ==========================================
+   */
+  const CONFIG = {
+      ASPECT_RATIO: 1.4,
+      WIDTH_PCT: 0.90,
+      SPAWN_Y_OFFSET: 80,
+      DANGER_LINE_PCT: 0.2,
+      GRAVITY: 0.58,
+      FRICTION: 0.01,
+      RESTITUTION: 0.15,
+      AIR_FRICTION: 0.001,
+      ITERATIONS: 10,
+      NEXT_QUEUE_RANGE: 5,
+      GAME_OVER_TIME: 180,
+      SIZE_RATIOS: [0.068, 0.093, 0.125, 0.137, 0.175, 0.206, 0.237, 0.312, 0.375, 0.481, 0.600],
+      // パステル系カラー枠
+      BORDER_COLORS: ['#ffb6c1', '#87cefa', '#dda0dd', '#ffdab9', '#98fb98', '#ff69b4', '#00bfff', '#ffc0cb', '#adebad', '#ff1493', '#4169e1'],
+      IMAGES: ['1.png', '2.png', '3.png', '4.png', '5.png', '6.png', '7.png', '8.png', '9.png', '10.png', '11.png']
+  };
 
-  const FRUIT_IMAGES = [
-      '1.png', '2.png', '3.png', '4.png', '5.png', '6.png', 
-      '7.png', '8.png', '9.png', '10.png', '11.png'
-  ];
+  const State = {
+      engine: null, render: null, runner: null,
+      currentBall: null, currLevelIndex: 0, nextLevelIndex: 0,
+      canDrop: false, isDragging: false, touchId: null,
+      score: 0, gameWidth: 0, gameHeight: 0,
+      isGameOver: false, dangerTimer: 0,
+      audioCtx: null, circularImages: {}, fruitProps: []
+  };
 
   const { Engine, Render, Runner, World, Bodies, Body, Events, Composite } = Matter;
 
-  let engine, render, runner;
-  let currentBall = null;
-  // ▼▼▼ 修正: 変数を2つに分離（手元と次） ▼▼▼
-  let currLevelIndex = 0; // 手元のフルーツID
-  let nextLevelIndex = 0; // 次のフルーツID
-  // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
-  
-  let canDrop = false;
-  let isDragging = false;
-  let score = 0;
-  let gameWidth, gameHeight;
-  let isGameOver = false;
-  let dangerTimer = 0;
-  
-  let fruitLevels = [];
-  const circularImages = {}; 
+  const DOM = {
+      container: document.getElementById('game-container'),
+      score: document.getElementById('score'),
+      nextPreview: document.getElementById('next-ball-preview'),
+      loading: document.getElementById('loading-screen'),
+      gameOver: document.getElementById('game-over-screen'),
+      finalScore: document.getElementById('final-score'),
+      dangerLine: document.getElementById('danger-line'),
+      cloudChar: document.getElementById('cloud-char')
+  };
 
-  const container = document.getElementById('game-container');
-  const scoreEl = document.getElementById('score');
-  const nextPreviewEl = document.getElementById('next-ball-preview');
-  const loadingScreen = document.getElementById('loading-screen');
-  const gameOverScreen = document.getElementById('game-over-screen');
-  const finalScoreEl = document.getElementById('final-score');
-  const dangerLineEl = document.getElementById('danger-line');
-
-  // --- 1. 画面サイズ計算 (2:3) ---
-  function calculateGameSize() {
-      const maxWidth = Math.min(window.innerWidth * 0.95, 450);
-      const maxHeight = window.innerHeight * 0.85;
-
-      let w = maxWidth;
-      let h = w * 1.5;
-
-      if (h > maxHeight) {
-          h = maxHeight;
-          w = h / 1.5;
+  function initAudio() {
+      if (!State.audioCtx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          State.audioCtx = new AudioContext();
       }
-
-      gameWidth = w;
-      gameHeight = h;
-
-      container.style.width = `${gameWidth}px`;
-      container.style.height = `${gameHeight}px`;
-
-      fruitLevels = SIZE_RATIOS.map((ratio, index) => {
-          return {
-              level: index + 1,
-              radius: (gameWidth * ratio) / 2,
-              img: FRUIT_IMAGES[index]
-          };
-      });
+      if (State.audioCtx.state === 'suspended') State.audioCtx.resume();
   }
 
-  // --- 2. 画像処理（高画質化 3倍ズーム） ---
-  async function preloadAndCropImages() {
-      calculateGameSize();
+  function playSound(type, level = 0) {
+      if (!State.audioCtx) return;
+      const osc = State.audioCtx.createOscillator();
+      const gain = State.audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(State.audioCtx.destination);
+      const now = State.audioCtx.currentTime;
 
-      const promises = fruitLevels.map((fruit, index) => {
+      if (type === 'drop') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(800, now);
+          osc.frequency.exponentialRampToValueAtTime(100, now + 0.15);
+          gain.gain.setValueAtTime(0.1, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+          osc.start(now); osc.stop(now + 0.15);
+      } else if (type === 'merge') {
+          osc.type = 'triangle';
+          const baseFreq = 440 + (level * 80);
+          osc.frequency.setValueAtTime(baseFreq, now);
+          osc.frequency.linearRampToValueAtTime(baseFreq * 1.5, now + 0.1);
+          gain.gain.setValueAtTime(0.1, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+          osc.start(now); osc.stop(now + 0.2);
+      }
+  }
+
+  async function init() {
+      calculateLayout();
+      const timeout = new Promise(resolve => setTimeout(resolve, 3000));
+      const imageLoad = preloadImages();
+      await Promise.race([imageLoad, timeout]);
+      setupPhysics();
+      setupEvents();
+      startGame();
+  }
+
+  function calculateLayout() {
+      const maxWidth = Math.min(window.innerWidth * CONFIG.WIDTH_PCT, 450);
+      const maxHeight = window.innerHeight * 0.85;
+      let w = maxWidth;
+      let h = w * CONFIG.ASPECT_RATIO;
+      if (h > maxHeight) { h = maxHeight; w = h / CONFIG.ASPECT_RATIO; }
+
+      State.gameWidth = w;
+      State.gameHeight = h;
+      DOM.container.style.width = `${w}px`;
+      DOM.container.style.height = `${h}px`;
+      DOM.cloudChar.style.top = `${-40}px`; // 画像に合わせて調整
+
+      State.fruitProps = CONFIG.SIZE_RATIOS.map((ratio, index) => ({
+          level: index + 1,
+          radius: (w * ratio) / 2,
+          img: CONFIG.IMAGES[index],
+          color: CONFIG.BORDER_COLORS[index]
+      }));
+  }
+
+  function preloadImages() {
+      const promises = State.fruitProps.map((fruit, index) => {
           return new Promise((resolve) => {
               const img = new Image();
               img.crossOrigin = "Anonymous";
               img.src = fruit.img;
-              
               img.onload = () => {
                   const scaleFactor = 3; 
                   const targetRadius = fruit.radius * scaleFactor;
                   const canvasSize = targetRadius * 2;
+                  const borderWidth = targetRadius * 0.05;
                   
                   const canvas = document.createElement('canvas');
                   canvas.width = canvasSize;
                   canvas.height = canvasSize;
                   const ctx = canvas.getContext('2d');
-
                   ctx.beginPath();
                   ctx.arc(canvasSize/2, canvasSize/2, canvasSize/2, 0, Math.PI * 2);
                   ctx.closePath();
-                  ctx.clip(); 
-
-                  const sourceSize = Math.min(img.width, img.height);
-                  const sx = (img.width - sourceSize) / 2;
-                  const sy = (img.height - sourceSize) / 2;
-
-                  ctx.drawImage(img, sx, sy, sourceSize, sourceSize, 0, 0, canvasSize, canvasSize);
-
-                  circularImages[index] = canvas.toDataURL();
+                  ctx.clip();
+                  const sSize = Math.min(img.width, img.height);
+                  ctx.drawImage(img, (img.width-sSize)/2, (img.height-sSize)/2, sSize, sSize, 0, 0, canvasSize, canvasSize);
+                  ctx.beginPath();
+                  ctx.arc(canvasSize/2, canvasSize/2, canvasSize/2 - borderWidth/2, 0, Math.PI * 2);
+                  ctx.lineWidth = borderWidth;
+                  ctx.strokeStyle = fruit.color;
+                  ctx.stroke();
+                  State.circularImages[index] = canvas.toDataURL();
                   resolve();
               };
-              img.onerror = () => {
-                  circularImages[index] = null;
-                  resolve();
-              };
+              img.onerror = () => resolve(); 
           });
       });
-      
-      await Promise.all(promises);
-      
-      loadingScreen.style.opacity = 0;
-      setTimeout(() => {
-          loadingScreen.style.display = 'none';
-          initGame();
-      }, 500);
+      return Promise.all(promises);
   }
 
-  // --- 3. ゲーム初期化 ---
-  function initGame() {
-      engine = Engine.create();
-      engine.world.gravity.y = 0.8; 
+  function setupPhysics() {
+      State.engine = Engine.create();
+      State.engine.world.gravity.y = CONFIG.GRAVITY;
+      State.engine.positionIterations = CONFIG.ITERATIONS;
+      State.engine.velocityIterations = CONFIG.ITERATIONS;
 
-      render = Render.create({
-          element: container,
-          engine: engine,
+      State.render = Render.create({
+          element: DOM.container,
+          engine: State.engine,
           options: {
-              width: gameWidth,
-              height: gameHeight,
+              width: State.gameWidth,
+              height: State.gameHeight,
               wireframes: false,
               background: 'transparent',
               pixelRatio: window.devicePixelRatio
           }
       });
 
-      const wallThickness = 500;
+      const wallThick = 500;
       const walls = [
-          Bodies.rectangle(gameWidth/2, gameHeight + wallThickness/2, gameWidth + wallThickness*2, wallThickness, { isStatic: true, render: { fillStyle: '#e6cba8' } }),
-          Bodies.rectangle(-wallThickness/2, gameHeight/2, wallThickness, gameHeight*2, { isStatic: true, render: { opacity: 0 } }),
-          Bodies.rectangle(gameWidth + wallThickness/2, gameHeight/2, wallThickness, gameHeight*2, { isStatic: true, render: { opacity: 0 } })
+          Bodies.rectangle(State.gameWidth/2, State.gameHeight + wallThick/2, State.gameWidth + wallThick*2, wallThick, { isStatic: true, render: { fillStyle: '#ffb6c1' } }),
+          Bodies.rectangle(-wallThick/2, State.gameHeight/2, wallThick, State.gameHeight*2, { isStatic: true, render: { opacity: 0 } }),
+          Bodies.rectangle(State.gameWidth + wallThick/2, State.gameHeight/2, wallThick, State.gameHeight*2, { isStatic: true, render: { opacity: 0 } })
       ];
-      World.add(engine.world, walls);
+      World.add(State.engine.world, walls);
 
-      Render.run(render);
-      runner = Runner.create();
-      Runner.run(runner, engine);
-      
-      Events.on(engine, 'collisionStart', handleCollision);
-      Events.on(engine, 'afterUpdate', checkGameOver);
-
-      // ▼▼▼ 修正: 初期化時に手元とNEXTを別々に抽選 ▼▼▼
-      // 本家仕様：Lv1(さくらんぼ)〜Lv5(かき)までが出現
-      currLevelIndex = Math.floor(Math.random() * 5);
-      nextLevelIndex = Math.floor(Math.random() * 5);
-      
-      updateNextView(); // NEXT表示更新
-      spawnReadyBall(); // 手元ボール生成
-      // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+      Events.on(State.engine, 'collisionStart', handleCollision);
+      Events.on(State.engine, 'afterUpdate', checkGameOver);
   }
 
-  // --- 4. ボール作成 ---
-  function createFruit(x, y, index, isStatic = false) {
-      const fruit = fruitLevels[index];
-      const texture = circularImages[index];
+  function setupEvents() {
+      const onStart = (e) => {
+          initAudio();
+          if (!State.canDrop || !State.currentBall || State.isGameOver) return;
+          e.preventDefault();
+          if (State.isDragging) return;
+          if (e.type === 'touchstart') {
+              State.touchId = e.changedTouches[0].identifier;
+          }
+          State.isDragging = true;
+          moveBall(e);
+      };
+      const onMove = (e) => {
+          if (!State.canDrop || !State.currentBall || !State.isDragging || State.isGameOver) return;
+          e.preventDefault();
+          moveBall(e);
+      };
+      const onEnd = (e) => {
+          if (!State.canDrop || !State.currentBall || !State.isDragging || State.isGameOver) return;
+          e.preventDefault();
+          if (e.type === 'touchend') {
+              let isTarget = false;
+              for (let i = 0; i < e.changedTouches.length; i++) {
+                  if (e.changedTouches[i].identifier === State.touchId) { isTarget = true; break; }
+              }
+              if (!isTarget) return;
+          }
+          State.isDragging = false;
+          State.touchId = null;
+          dropBall();
+      };
+      DOM.container.addEventListener('touchstart', onStart, { passive: false });
+      DOM.container.addEventListener('touchmove', onMove, { passive: false });
+      DOM.container.addEventListener('touchend', onEnd, { passive: false });
+      DOM.container.addEventListener('mousedown', onStart);
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onEnd);
+  }
 
+  function startGame() {
+      DOM.loading.style.opacity = 0;
+      setTimeout(() => DOM.loading.style.display = 'none', 500);
+      Render.run(State.render);
+      State.runner = Runner.create();
+      Runner.run(State.runner, State.engine);
+      State.currLevelIndex = Math.floor(Math.random() * CONFIG.NEXT_QUEUE_RANGE);
+      State.nextLevelIndex = Math.floor(Math.random() * CONFIG.NEXT_QUEUE_RANGE);
+      updateNextView();
+      spawnReadyBall();
+  }
+
+  function createFruit(x, y, index, isStatic = false) {
+      const fruit = State.fruitProps[index];
+      const texture = State.circularImages[index];
       return Bodies.circle(x, y, fruit.radius, {
           isStatic: isStatic,
           label: 'fruit_' + index,
-          restitution: 0.2,
-          friction: 0.1, 
-          density: 0.001,
+          restitution: CONFIG.RESTITUTION,
+          friction: CONFIG.FRICTION,
+          frictionAir: CONFIG.AIR_FRICTION,
           render: {
-              sprite: texture ? {
-                  texture: texture,
-                  xScale: 1 / 3, 
-                  yScale: 1 / 3
-              } : { fillStyle: '#ffb347' } 
+              sprite: texture ? { texture: texture, xScale: 1/3, yScale: 1/3 } : { fillStyle: fruit.color }
           }
       });
   }
 
-  // ▼▼▼ NEXT表示の更新専用関数 ▼▼▼
-  function updateNextView() {
-      const texture = circularImages[nextLevelIndex];
-      if (texture) {
-          nextPreviewEl.style.backgroundImage = `url(${texture})`;
-          nextPreviewEl.style.backgroundColor = 'transparent';
-      } else {
-          nextPreviewEl.style.backgroundImage = 'none';
-          nextPreviewEl.style.backgroundColor = '#ffb347';
-      }
-  }
-
   function spawnReadyBall() {
-      if (currentBall || isGameOver) return;
-      // 手元のボール(currLevelIndex)を生成
-      currentBall = createFruit(gameWidth/2, 50, currLevelIndex, true);
-      currentBall.collisionFilter = { group: -1, category: 0x0002, mask: 0x0000 }; 
-      World.add(engine.world, currentBall);
-      canDrop = true;
-      isDragging = false;
+      if (State.currentBall || State.isGameOver) return;
+      State.currentBall = createFruit(State.gameWidth/2, CONFIG.SPAWN_Y_OFFSET, State.currLevelIndex, true);
+      State.currentBall.collisionFilter = { group: -1, category: 0x0002, mask: 0x0000 };
+      World.add(State.engine.world, State.currentBall);
+      State.canDrop = true;
+      DOM.cloudChar.style.display = 'block';
+      updateCloudPos(State.gameWidth/2);
   }
-
-  // --- 5. 操作 ---
-  
-  const handleStart = (e) => {
-      if (!canDrop || !currentBall || isGameOver) return;
-      e.preventDefault();
-      isDragging = true;
-      moveBall(e);
-  };
-
-  const handleMove = (e) => {
-      if (!canDrop || !currentBall || !isDragging || isGameOver) return;
-      e.preventDefault();
-      moveBall(e);
-  };
-
-  const handleEnd = (e) => {
-      if (!canDrop || !currentBall || !isDragging || isGameOver) return;
-      e.preventDefault();
-      isDragging = false;
-      dropBall();
-  };
 
   function moveBall(e) {
-      let clientX;
+      let cx;
       if (e.type.startsWith('touch')) {
-          clientX = e.touches[0].clientX;
-      } else {
-          clientX = e.clientX;
-      }
-      const rect = container.getBoundingClientRect();
-      const x = clientX - rect.left;
-      
-      // 手元のフルーツサイズで壁際判定
-      const fruit = fruitLevels[currLevelIndex];
-      const minX = fruit.radius + 5;
-      const maxX = gameWidth - fruit.radius - 5;
+          for (let i = 0; i < e.touches.length; i++) {
+              if (e.touches[i].identifier === State.touchId) { cx = e.touches[i].clientX; break; }
+          }
+          if (cx === undefined) return;
+      } else { cx = e.clientX; }
+
+      const rect = DOM.container.getBoundingClientRect();
+      const x = cx - rect.left;
+      const fruit = State.fruitProps[State.currLevelIndex];
+      const minX = fruit.radius + 2;
+      const maxX = State.gameWidth - fruit.radius - 2;
       const clampedX = Math.max(minX, Math.min(maxX, x));
-      Body.setPosition(currentBall, { x: clampedX, y: 50 });
+
+      Body.setPosition(State.currentBall, { x: clampedX, y: CONFIG.SPAWN_Y_OFFSET });
+      updateCloudPos(clampedX);
+  }
+
+  function updateCloudPos(x) {
+      DOM.cloudChar.style.left = `${x}px`;
   }
 
   function dropBall() {
-      Body.setStatic(currentBall, false);
-      currentBall.collisionFilter = { group: 0, category: 0x0001, mask: 0xFFFFFFFF };
-      currentBall = null;
-      canDrop = false;
-
-      // ▼▼▼ 修正: 落とした瞬間にローテーション ▼▼▼
-      // 1. NEXTにあったやつが、次の手元(Current)になる
-      currLevelIndex = nextLevelIndex;
-      // 2. 新しいNEXTを抽選する
-      nextLevelIndex = Math.floor(Math.random() * 5);
-      
-      // 3. 表示と次弾装填
+      playSound('drop');
+      Body.setStatic(State.currentBall, false);
+      State.currentBall.collisionFilter = { group: 0, category: 0x0001, mask: 0xFFFFFFFF };
+      State.currentBall = null;
+      State.canDrop = false;
+      DOM.cloudChar.style.display = 'none';
+      State.currLevelIndex = State.nextLevelIndex;
+      State.nextLevelIndex = Math.floor(Math.random() * CONFIG.NEXT_QUEUE_RANGE);
       updateNextView();
       setTimeout(spawnReadyBall, 600);
-      // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
   }
 
-  container.addEventListener('touchstart', handleStart, { passive: false });
-  container.addEventListener('touchmove', handleMove, { passive: false });
-  container.addEventListener('touchend', handleEnd, { passive: false });
-  container.addEventListener('mousedown', handleStart);
-  window.addEventListener('mousemove', handleMove);
-  window.addEventListener('mouseup', handleEnd);
+  function updateNextView() {
+      const texture = State.circularImages[State.nextLevelIndex];
+      if (texture) {
+          DOM.nextPreview.style.backgroundImage = `url(${texture})`;
+          DOM.nextPreview.style.backgroundColor = 'transparent';
+      } else {
+          DOM.nextPreview.style.backgroundImage = 'none';
+          DOM.nextPreview.style.backgroundColor = '#87cefa';
+      }
+  }
 
-  // --- 6. 合体 ---
+  function createShockwave(x, y, radius) {
+      const wave = document.createElement('div');
+      wave.className = 'shockwave';
+      wave.style.left = `${x}px`;
+      wave.style.top = `${y}px`;
+      wave.style.width = `${radius * 2}px`;
+      wave.style.height = `${radius * 2}px`;
+      DOM.container.appendChild(wave);
+      setTimeout(() => wave.remove(), 400);
+  }
+
   function handleCollision(event) {
-      if (isGameOver) return;
+      if (State.isGameOver) return;
       const pairs = event.pairs;
+      const processedBodies = new Set();
+
       for (let i = 0; i < pairs.length; i++) {
-          const bodyA = pairs[i].bodyA;
-          const bodyB = pairs[i].bodyB;
+          const { bodyA, bodyB } = pairs[i];
+          if (processedBodies.has(bodyA.id) || processedBodies.has(bodyB.id)) continue;
 
           if (bodyA.label.startsWith('fruit_') && bodyB.label === bodyA.label) {
               const level = parseInt(bodyA.label.split('_')[1]);
-
-              if (level < fruitLevels.length - 1) {
-                  const midX = (bodyA.position.x + bodyB.position.x) / 2;
-                  const midY = (bodyA.position.y + bodyB.position.y) / 2;
-
-                  World.remove(engine.world, [bodyA, bodyB]);
-                  const newBall = createFruit(midX, midY, level + 1);
-                  World.add(engine.world, newBall);
-
-                  score += (level + 1) * 2;
-                  scoreEl.textContent = score;
-                  break; 
+              if (level < State.fruitProps.length - 1) {
+                  processedBodies.add(bodyA.id);
+                  processedBodies.add(bodyB.id);
+                  World.remove(State.engine.world, [bodyA, bodyB]);
+                  
+                  const lower = (bodyA.position.y > bodyB.position.y) ? bodyA : bodyB;
+                  const newBall = createFruit(lower.position.x, lower.position.y, level + 1);
+                  World.add(State.engine.world, newBall);
+                  
+                  createShockwave(lower.position.x, lower.position.y, newBall.circleRadius);
+                  playSound('merge', level);
+                  
+                  const pts = (level + 1) * (level + 2) / 2;
+                  State.score += pts;
+                  DOM.score.textContent = State.score;
               }
           }
       }
   }
 
-  // --- 7. ゲームオーバー判定 ---
   function checkGameOver() {
-      if (isGameOver) return;
+      if (State.isGameOver) return;
+      const bodies = Composite.allBodies(State.engine.world);
+      const dangerY = State.gameHeight * CONFIG.DANGER_LINE_PCT;
+      DOM.dangerLine.style.top = `${dangerY}px`;
 
-      const bodies = Composite.allBodies(engine.world);
-      const dangerY = 100; // 点線のY座標
       let isDanger = false;
-
       for (const body of bodies) {
-          if (!body.isStatic && body !== currentBall) {
+          if (!body.isStatic && body !== State.currentBall) {
               if (body.position.y - body.circleRadius * 0.5 < dangerY) {
                   isDanger = true;
                   break;
@@ -497,26 +563,21 @@
       }
 
       if (isDanger) {
-          dangerLineEl.classList.add('danger-active');
-          dangerTimer++;
-          if (dangerTimer > 180) { // 3秒
-              gameOver();
+          DOM.dangerLine.classList.add('danger-active');
+          State.dangerTimer++;
+          if (State.dangerTimer > CONFIG.GAME_OVER_TIME) {
+              State.isGameOver = true;
+              Runner.stop(State.runner);
+              DOM.finalScore.innerText = State.score;
+              DOM.gameOver.style.display = 'flex';
           }
       } else {
-          dangerLineEl.classList.remove('danger-active');
-          dangerTimer = 0;
+          DOM.dangerLine.classList.remove('danger-active');
+          State.dangerTimer = 0;
       }
   }
 
-  function gameOver() {
-      isGameOver = true;
-      Runner.stop(runner);
-      finalScoreEl.innerText = score;
-      gameOverScreen.style.display = 'flex';
-  }
-
-  preloadAndCropImages();
-
+  window.onload = init;
 </script>
 </body>
 </html>
